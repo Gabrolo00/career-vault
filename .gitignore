@@ -32,6 +32,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +40,16 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# debug / temp files
+*.log
+expo_log.txt
+put_result.txt
+webhook_check.txt
+
+# n8n automation scripts (obsolete)
+definitive_fix.mjs
+fix_and_test.mjs
+full_e2e_test.mjs
+patch_workflow.mjs
+wf_update.json
