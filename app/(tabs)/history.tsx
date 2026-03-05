@@ -9,22 +9,11 @@ import {
     Text,
     View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useDocuments } from '../../src/hooks/useDocuments';
 import { GeneratedDocument } from '../../src/types/database';
-import { colors, radius, spacing, typography } from '../../src/theme';
-
-// ─── Status meta ──────────────────────────────────────────────────────────────
-
-const STATUS_META: Record<
-    GeneratedDocument['status'],
-    { label: string; color: string; bgColor: string; emoji: string }
-> = {
-    pending: { label: 'In coda', color: colors.textMuted, bgColor: colors.bgCard, emoji: '⏳' },
-    processing: { label: 'Elaborando', color: colors.warning, bgColor: colors.warningBg, emoji: '⚙️' },
-    completed: { label: 'Completato', color: colors.success, bgColor: colors.successBg, emoji: '✅' },
-    failed: { label: 'Errore', color: colors.error, bgColor: colors.errorBg, emoji: '❌' },
-};
+import { colors, radius, spacing, typography, STATUS_ICONS, DOC_TYPE_ICONS, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -51,10 +40,9 @@ export default function HistoryScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>📄 Storico generazioni</Text>
+                <Text style={styles.title}>Storico generazioni</Text>
                 <Text style={styles.subtitle}>
                     {documents.length} document{documents.length !== 1 ? 'i' : 'o'} generato
-                    {documents.length !== 1 ? '' : ''}
                 </Text>
             </View>
 
@@ -64,7 +52,8 @@ export default function HistoryScreen() {
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Text style={styles.errorText}>⚠️ {error}</Text>
+                    <Ionicons name="warning" size={32} color={colors.error} />
+                    <Text style={styles.errorText}>{error}</Text>
                     <Pressable style={styles.retryBtn} onPress={refresh}>
                         <Text style={styles.retryText}>Riprova</Text>
                     </Pressable>
@@ -90,7 +79,7 @@ export default function HistoryScreen() {
                     )}
                     ListEmptyComponent={
                         <View style={styles.empty}>
-                            <Text style={styles.emptyEmoji}>📭</Text>
+                            <Ionicons name="file-tray-outline" size={52} color={colors.textMuted} />
                             <Text style={styles.emptyTitle}>Nessun documento ancora</Text>
                             <Text style={styles.emptyBody}>
                                 Vai su "Genera" e crea il tuo primo CV o Cover Letter
@@ -99,7 +88,7 @@ export default function HistoryScreen() {
                                 style={styles.goGenBtn}
                                 onPress={() => router.push('/(tabs)/generate')}
                             >
-                                <Text style={styles.goGenText}>✨ Vai a Genera</Text>
+                                <Text style={styles.goGenText}>Vai a Genera</Text>
                             </Pressable>
                         </View>
                     }
@@ -120,7 +109,8 @@ function DocumentRow({
     onPress: () => void;
     onDelete: () => void;
 }) {
-    const status = STATUS_META[doc.status];
+    const status = STATUS_ICONS[doc.status];
+    const docIcon = DOC_TYPE_ICONS[doc.doc_type] ?? 'document-text';
     const createdAt = new Date(doc.created_at).toLocaleDateString('it-IT', {
         day: '2-digit',
         month: 'short',
@@ -137,9 +127,7 @@ function DocumentRow({
         >
             {/* Left: type icon */}
             <View style={styles.rowIcon}>
-                <Text style={styles.rowIconText}>
-                    {doc.doc_type === 'cv' ? '📄' : '✉️'}
-                </Text>
+                <Ionicons name={docIcon as any} size={22} color={colors.primary} />
             </View>
 
             {/* Center: info */}
@@ -156,13 +144,13 @@ function DocumentRow({
             {/* Right: status badge + delete */}
             <View style={styles.rowRight}>
                 <View style={[styles.statusBadge, { backgroundColor: status.bgColor }]}>
-                    <Text style={styles.statusEmoji}>{status.emoji}</Text>
+                    <Ionicons name={status.iconName as any} size={11} color={status.color} />
                     <Text style={[styles.statusLabel, { color: status.color }]}>
                         {status.label}
                     </Text>
                 </View>
                 <Pressable style={styles.deleteIcon} onPress={onDelete}>
-                    <Text style={{ color: colors.error, fontSize: 16 }}>🗑</Text>
+                    <Ionicons name="trash-outline" size={16} color={colors.error} />
                 </Pressable>
             </View>
         </Pressable>
@@ -188,7 +176,7 @@ const styles = StyleSheet.create({
     retryBtn: { backgroundColor: colors.bgCard, borderRadius: radius.md, paddingHorizontal: 24, paddingVertical: 10 },
     retryText: { color: colors.primary, fontWeight: '700' },
 
-    listContent: { padding: spacing.lg, gap: spacing.sm, paddingBottom: 100 },
+    listContent: { padding: spacing.lg, gap: spacing.sm, paddingBottom: SCREEN_PADDING_BOTTOM },
 
     row: {
         flexDirection: 'row',
@@ -208,7 +196,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    rowIconText: { fontSize: 22 },
     rowInfo: { flex: 1, gap: 3 },
     rowType: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
     rowJd: { fontSize: 12, color: colors.textMuted },
@@ -222,13 +209,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 3,
     },
-    statusEmoji: { fontSize: 11 },
     statusLabel: { fontSize: 10, fontWeight: '700' },
     deleteIcon: { padding: 4 },
 
     // Empty state
     empty: { alignItems: 'center', paddingTop: 80, gap: spacing.sm },
-    emptyEmoji: { fontSize: 48 },
     emptyTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
     emptyBody: { fontSize: 14, color: colors.textMuted, textAlign: 'center', maxWidth: 280 },
     goGenBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingHorizontal: 28, paddingVertical: 13, marginTop: spacing.sm },

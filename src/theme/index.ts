@@ -1,22 +1,25 @@
 // ─── Palette ─────────────────────────────────────────────────────────────────
 export const colors = {
     // Background layers
-    bg: '#0F172A',
-    bgCard: '#1E293B',
-    bgInput: '#1E293B',
-    border: '#334155',
-    borderFocus: '#6366F1',
+    bg: '#080D1A',
+    bgCard: '#0F1929',
+    bgCardAlt: '#162033',
+    bgInput: '#0F1929',
+    border: '#1E3A5F',
+    borderFocus: '#3B82F6',
 
     // Brand
-    primary: '#6366F1',
-    primaryLight: '#818CF8',
-    primaryDark: '#4F46E5',
+    primary: '#3B82F6',
+    primaryLight: '#60A5FA',
+    primaryDark: '#2563EB',
+    secondary: '#22D3EE',
+    secondaryLight: '#67E8F9',
 
     // Text
-    textPrimary: '#F1F5F9',
+    textPrimary: '#F8FAFC',
     textSecondary: '#CBD5E1',
     textMuted: '#64748B',
-    textPlaceholder: '#475569',
+    textPlaceholder: '#334155',
 
     // Semantic
     success: '#22C55E',
@@ -27,11 +30,11 @@ export const colors = {
     warningBg: '#1C1400',
 
     // Experience type chips
-    work: '#6366F1',
-    education: '#0EA5E9',
-    project: '#10B981',
-    certification: '#F59E0B',
-    volunteer: '#EC4899',
+    work: '#3B82F6',  // electric blue
+    education: '#22D3EE',  // cyan
+    project: '#8B5CF6',  // violet
+    certification: '#F59E0B',  // amber
+    volunteer: '#EC4899',  // pink
 } as const;
 
 export const spacing = {
@@ -47,6 +50,7 @@ export const radius = {
     sm: 8,
     md: 12,
     lg: 16,
+    xl: 20,
     full: 999,
 } as const;
 
@@ -60,12 +64,31 @@ export const typography = {
     label: { fontSize: 14, fontWeight: '600' as const, color: colors.textSecondary },
 } as const;
 
+// Bottom tab floating pill height + bottom offset — used for paddingBottom across screens
+export const TAB_BAR_HEIGHT = 68;
+export const TAB_BAR_BOTTOM = 20;
+export const SCREEN_PADDING_BOTTOM = TAB_BAR_HEIGHT + TAB_BAR_BOTTOM + 16;
+
 // ─── Experience type helpers ──────────────────────────────────────────────────
 
-export const TYPE_META: Record<string, { label: string; emoji: string; color: string }> = {
-    work: { label: 'Lavoro', emoji: '💼', color: colors.work },
-    education: { label: 'Istruzione', emoji: '🎓', color: colors.education },
-    project: { label: 'Progetto', emoji: '🚀', color: colors.project },
-    certification: { label: 'Certificazione', emoji: '🏆', color: colors.certification },
-    volunteer: { label: 'Volontariato', emoji: '🤝', color: colors.volunteer },
+export const TYPE_META: Record<string, { label: string; iconName: string; color: string }> = {
+    work: { label: 'Lavoro', iconName: 'briefcase', color: colors.work },
+    education: { label: 'Istruzione', iconName: 'school', color: colors.education },
+    project: { label: 'Progetto', iconName: 'rocket', color: colors.project },
+    certification: { label: 'Certificazione', iconName: 'ribbon', color: colors.certification },
+    volunteer: { label: 'Volontariato', iconName: 'heart', color: colors.volunteer },
+};
+
+// Status icons for documents
+export const STATUS_ICONS: Record<string, { label: string; color: string; bgColor: string; iconName: string }> = {
+    pending: { label: 'In coda', color: colors.textMuted, bgColor: colors.bgCard, iconName: 'time-outline' },
+    processing: { label: 'Elaborando', color: colors.warning, bgColor: colors.warningBg, iconName: 'refresh' },
+    completed: { label: 'Completato', color: colors.success, bgColor: colors.successBg, iconName: 'checkmark-circle' },
+    failed: { label: 'Errore', color: colors.error, bgColor: colors.errorBg, iconName: 'close-circle' },
+};
+
+// Doc type icons
+export const DOC_TYPE_ICONS: Record<string, string> = {
+    cv: 'document-text',
+    cover_letter: 'mail',
 };

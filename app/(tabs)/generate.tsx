@@ -8,39 +8,28 @@ import {
     TextInput,
     View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useDocuments } from '../../src/hooks/useDocuments';
 import { DocumentType, GeneratedDocument } from '../../src/types/database';
-import { colors, radius, spacing, typography } from '../../src/theme';
+import { colors, radius, spacing, typography, STATUS_ICONS, DOC_TYPE_ICONS, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 
 // ─── Doc type config ──────────────────────────────────────────────────────────
 
-const DOC_TYPES: { value: DocumentType; label: string; emoji: string; desc: string }[] = [
+const DOC_TYPES: { value: DocumentType; label: string; iconName: string; desc: string }[] = [
     {
         value: 'cv',
         label: 'Curriculum Vitae',
-        emoji: '📄',
+        iconName: 'document-text',
         desc: 'CV tailored alla job description tramite RAG sulle tue esperienze',
     },
     {
         value: 'cover_letter',
         label: 'Cover Letter',
-        emoji: '✉️',
+        iconName: 'mail',
         desc: 'Lettera di presentazione personalizzata con tono e parole chiave dal JD',
     },
 ];
-
-// ─── Status helpers ───────────────────────────────────────────────────────────
-
-const STATUS_META: Record<
-    GeneratedDocument['status'],
-    { label: string; color: string; emoji: string }
-> = {
-    pending: { label: 'In coda…', color: colors.textMuted, emoji: '⏳' },
-    processing: { label: 'Generando…', color: colors.warning, emoji: '⚙️' },
-    completed: { label: 'Completato', color: colors.success, emoji: '✅' },
-    failed: { label: 'Errore', color: colors.error, emoji: '❌' },
-};
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -74,7 +63,7 @@ export default function GenerateScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>✨ Genera documento</Text>
+                <Text style={styles.title}>Genera documento</Text>
                 <Text style={styles.subtitle}>
                     Incolla una Job Description e lascia che l'AI costruisca il documento perfetto
                 </Text>
@@ -96,7 +85,11 @@ export default function GenerateScreen() {
                                 style={[styles.docTypeCard, active && styles.docTypeCardActive]}
                                 onPress={() => setDocType(dt.value)}
                             >
-                                <Text style={styles.docTypeEmoji}>{dt.emoji}</Text>
+                                <Ionicons
+                                    name={dt.iconName as any}
+                                    size={28}
+                                    color={active ? colors.primary : colors.textMuted}
+                                />
                                 <Text style={[styles.docTypeLabel, active && { color: colors.primary }]}>
                                     {dt.label}
                                 </Text>
@@ -145,9 +138,12 @@ export default function GenerateScreen() {
                             <Text style={styles.genBtnText}>Generando con AI…</Text>
                         </View>
                     ) : (
-                        <Text style={styles.genBtnText}>
-                            {docType === 'cv' ? '📄' : '✉️'} Genera {DOC_TYPES.find(d => d.value === docType)?.label}
-                        </Text>
+                        <View style={styles.genBtnInner}>
+                            <Ionicons name={DOC_TYPE_ICONS[docType] as any} size={18} color="#fff" />
+                            <Text style={styles.genBtnText}>
+                                Genera {DOC_TYPES.find(d => d.value === docType)?.label}
+                            </Text>
+                        </View>
                     )}
                 </Pressable>
 
@@ -171,10 +167,14 @@ export default function GenerateScreen() {
                 {/* Error */}
                 {genError && !generating && (
                     <View style={styles.errorCard}>
-                        <Text style={styles.errorTitle}>❌ Errore durante la generazione</Text>
+                        <View style={styles.errorTitleRow}>
+                            <Ionicons name="close-circle" size={18} color={colors.error} />
+                            <Text style={styles.errorTitle}>Errore durante la generazione</Text>
+                        </View>
                         <Text style={styles.errorBody}>{genError}</Text>
                         <Pressable style={styles.retryBtn} onPress={handleGenerate}>
-                            <Text style={styles.retryText}>↺ Riprova</Text>
+                            <Ionicons name="refresh" size={14} color={colors.error} />
+                            <Text style={styles.retryText}>Riprova</Text>
                         </Pressable>
                     </View>
                 )}
@@ -187,7 +187,10 @@ export default function GenerateScreen() {
                 {/* Tip */}
                 {!generating && !result && !genError && (
                     <View style={styles.tipCard}>
-                        <Text style={styles.tipTitle}>💡 Suggerimenti per un buon risultato</Text>
+                        <View style={styles.tipTitleRow}>
+                            <Ionicons name="bulb-outline" size={15} color={colors.textSecondary} />
+                            <Text style={styles.tipTitle}>Suggerimenti per un buon risultato</Text>
+                        </View>
                         <Text style={styles.tipItem}>• Incolla la JD completa, non solo il titolo</Text>
                         <Text style={styles.tipItem}>• Include responsabilità e requisiti tecnici</Text>
                         <Text style={styles.tipItem}>• Più la JD è dettagliata, più il CV è preciso</Text>
@@ -207,22 +210,30 @@ function ResultCard({
     doc: GeneratedDocument;
     onViewPdf: () => void;
 }) {
-    const meta = STATUS_META[doc.status];
+    const status = STATUS_ICONS[doc.status];
     return (
         <View style={styles.resultCard}>
             <View style={styles.resultHeader}>
-                <Text style={styles.resultEmoji}>{meta.emoji}</Text>
+                <Ionicons name={status.iconName as any} size={32} color={status.color} />
                 <View style={{ flex: 1 }}>
-                    <Text style={[styles.resultStatus, { color: meta.color }]}>{meta.label}</Text>
-                    <Text style={styles.resultType}>
-                        {doc.doc_type === 'cv' ? '📄 Curriculum Vitae' : '✉️ Cover Letter'}
-                    </Text>
+                    <Text style={[styles.resultStatus, { color: status.color }]}>{status.label}</Text>
+                    <View style={styles.resultTypeRow}>
+                        <Ionicons
+                            name={DOC_TYPE_ICONS[doc.doc_type] as any}
+                            size={13}
+                            color={colors.textMuted}
+                        />
+                        <Text style={styles.resultType}>
+                            {doc.doc_type === 'cv' ? 'Curriculum Vitae' : 'Cover Letter'}
+                        </Text>
+                    </View>
                 </View>
             </View>
 
             {doc.status === 'completed' && doc.pdf_url ? (
                 <Pressable style={styles.viewPdfBtn} onPress={onViewPdf}>
-                    <Text style={styles.viewPdfText}>👁 Visualizza PDF</Text>
+                    <Ionicons name="eye" size={16} color="#fff" />
+                    <Text style={styles.viewPdfText}>Visualizza documento</Text>
                 </Pressable>
             ) : doc.status === 'processing' ? (
                 <View style={styles.processingNote}>
@@ -253,7 +264,7 @@ const styles = StyleSheet.create({
     title: { ...typography.h2, marginBottom: 6 },
     subtitle: { fontSize: 13, color: colors.textMuted, lineHeight: 18 },
 
-    content: { padding: spacing.lg, gap: spacing.md, paddingBottom: 100 },
+    content: { padding: spacing.lg, gap: spacing.md, paddingBottom: SCREEN_PADDING_BOTTOM },
     sectionLabel: { ...typography.label, marginBottom: 4 },
 
     // Doc type selector
@@ -271,7 +282,6 @@ const styles = StyleSheet.create({
         borderColor: colors.primary,
         backgroundColor: colors.primary + '12',
     },
-    docTypeEmoji: { fontSize: 24 },
     docTypeLabel: {
         fontSize: 14,
         fontWeight: '700',
@@ -336,13 +346,17 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.error + '44',
     },
+    errorTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     errorTitle: { fontSize: 15, fontWeight: '700', color: colors.error },
     errorBody: { fontSize: 13, color: '#FCA5A5', lineHeight: 20 },
     retryBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
         backgroundColor: colors.error + '22',
         borderRadius: radius.md,
         paddingVertical: 10,
-        alignItems: 'center',
+        justifyContent: 'center',
     },
     retryText: { color: colors.error, fontWeight: '700' },
 
@@ -356,14 +370,17 @@ const styles = StyleSheet.create({
         borderColor: colors.border,
     },
     resultHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    resultEmoji: { fontSize: 32 },
     resultStatus: { fontSize: 16, fontWeight: '700' },
-    resultType: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+    resultTypeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+    resultType: { fontSize: 13, color: colors.textMuted },
     viewPdfBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
         backgroundColor: colors.primary,
         borderRadius: radius.md,
         paddingVertical: 12,
-        alignItems: 'center',
     },
     viewPdfText: { color: '#fff', fontWeight: '700', fontSize: 15 },
     processingNote: {
@@ -386,6 +403,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.border,
     },
-    tipTitle: { fontSize: 14, fontWeight: '700', color: colors.textSecondary, marginBottom: 4 },
+    tipTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+    tipTitle: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
     tipItem: { fontSize: 13, color: colors.textMuted, lineHeight: 20 },
 });

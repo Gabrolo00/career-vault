@@ -4,27 +4,29 @@ import {
     FlatList,
     Pressable,
     RefreshControl,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useExperiences } from '../../src/hooks/useExperiences';
 import { ExperienceCard } from '../../src/components/ExperienceCard';
-import { colors, radius, spacing, TYPE_META } from '../../src/theme';
+import { colors, radius, spacing, TYPE_META, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 import { ExperienceType } from '../../src/types/database';
 
 const ALL_FILTER = 'all';
 type FilterValue = ExperienceType | typeof ALL_FILTER;
 
-const TYPE_FILTERS: { value: FilterValue; label: string; emoji: string }[] = [
-    { value: ALL_FILTER, label: 'Tutti', emoji: '⚡' },
+const TYPE_FILTERS: { value: FilterValue; label: string; iconName: string }[] = [
+    { value: ALL_FILTER, label: 'Tutti', iconName: 'apps' },
     ...Object.entries(TYPE_META).map(([k, v]) => ({
         value: k as ExperienceType,
         label: v.label,
-        emoji: v.emoji,
+        iconName: v.iconName,
     })),
 ];
 
@@ -49,35 +51,40 @@ export default function VaultScreen() {
 
     const firstName = user?.user_metadata?.full_name?.split(' ')[0] ?? 'ciao';
 
+    // 4 stat values
+    const countWork = experiences.filter(e => e.type === 'work').length;
+    const countEdu = experiences.filter(e => e.type === 'education').length;
+    const countProject = experiences.filter(e => e.type === 'project').length;
+    const uniqueSkills = [...new Set(experiences.flatMap(e => e.skills))].length;
+
     return (
         <View style={styles.container}>
-            {/* Header */}
+            {/* Header — compact */}
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.greeting}>👋 Ciao, {firstName}</Text>
+                    <Text style={styles.greeting}>Ciao, {firstName}</Text>
                     <Text style={styles.headline}>Il tuo Vault</Text>
                 </View>
-                <Pressable
-                    style={styles.addBtn}
-                    onPress={() => router.push('/experience/new')}
-                >
-                    <Text style={styles.addBtnText}>+ Aggiungi</Text>
+                <Pressable style={styles.addBtn} onPress={() => router.push('/experience/new')}>
+                    <Ionicons name="add" size={18} color="#fff" />
+                    <Text style={styles.addBtnText}>Aggiungi</Text>
                 </Pressable>
             </View>
 
-            {/* Stats bar */}
-            <View style={styles.statsBar}>
-                <StatChip label="Esperienze" value={experiences.length} />
-                <StatChip label="Skills" value={[...new Set(experiences.flatMap((e) => e.skills))].length} />
-                <StatChip label="Anni" value={uniqueYears(experiences)} />
+            {/* 4 Stat cards */}
+            <View style={styles.statsRow}>
+                <StatCard label="Esperienze" value={countWork} iconName="briefcase" color={colors.primary} />
+                <StatCard label="Formazione" value={countEdu} iconName="school" color={colors.secondary} />
+                <StatCard label="Progetti" value={countProject} iconName="rocket" color={colors.project} />
+                <StatCard label="Competenze" value={uniqueSkills} iconName="ribbon" color={colors.certification} />
             </View>
 
-            {/* Search */}
+            {/* Search — pill */}
             <View style={styles.searchWrapper}>
-                <Text style={styles.searchIcon}>🔍</Text>
+                <Ionicons name="search" size={16} color={colors.textMuted} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Cerca titolo, azienda, skill…"
+                    placeholder="Cerca nel Vault…"
                     placeholderTextColor={colors.textPlaceholder}
                     value={searchQuery}
                     onChangeText={setSearchQuery}
@@ -85,48 +92,46 @@ export default function VaultScreen() {
                 />
                 {searchQuery.length > 0 && (
                     <Pressable onPress={() => setSearchQuery('')}>
-                        <Text style={styles.searchClear}>✕</Text>
+                        <Ionicons name="close-circle" size={17} color={colors.textMuted} />
                     </Pressable>
                 )}
             </View>
 
-            {/* Type filters */}
-            <FlatList
-                data={TYPE_FILTERS}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filtersRow}
-                keyExtractor={(item) => item.value}
-                renderItem={({ item }) => {
-                    const isActive = activeFilter === item.value;
-                    const color = item.value === ALL_FILTER
-                        ? colors.primary
-                        : TYPE_META[item.value as ExperienceType]?.color ?? colors.primary;
-                    return (
-                        <Pressable
-                            style={[
-                                styles.filter,
-                                isActive && { backgroundColor: color + '25', borderColor: color },
-                            ]}
-                            onPress={() => setActiveFilter(item.value)}
-                        >
-                            <Text style={styles.filterEmoji}>{item.emoji}</Text>
-                            <Text style={[styles.filterLabel, isActive && { color }]}>
-                                {item.label}
-                            </Text>
-                        </Pressable>
-                    );
-                }}
-            />
+            {/* Filter pills */}
+            <View style={styles.filtersContainer}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.filtersRow}
+                >
+                    {TYPE_FILTERS.map((item) => {
+                        const isActive = activeFilter === item.value;
+                        const acc = item.value === ALL_FILTER
+                            ? colors.primary
+                            : TYPE_META[item.value as ExperienceType]?.color ?? colors.primary;
+                        return (
+                            <Pressable
+                                key={item.value}
+                                style={[styles.filter, isActive && { backgroundColor: acc, borderColor: acc }]}
+                                onPress={() => setActiveFilter(item.value)}
+                            >
+                                <Ionicons name={item.iconName as any} size={12} color={isActive ? '#fff' : colors.textMuted} />
+                                <Text style={[styles.filterLabel, isActive && { color: '#fff' }]}>{item.label}</Text>
+                            </Pressable>
+                        );
+                    })}
+                </ScrollView>
+            </View>
 
-            {/* List */}
+            {/* Experience list */}
             {loading ? (
                 <View style={styles.center}>
                     <ActivityIndicator color={colors.primary} size="large" />
                 </View>
             ) : error ? (
                 <View style={styles.center}>
-                    <Text style={styles.errorText}>⚠️ {error}</Text>
+                    <Ionicons name="warning" size={28} color={colors.error} />
+                    <Text style={styles.errorText}>{error}</Text>
                     <Pressable style={styles.retryBtn} onPress={refresh}>
                         <Text style={styles.retryText}>Riprova</Text>
                     </Pressable>
@@ -138,21 +143,17 @@ export default function VaultScreen() {
                     renderItem={({ item }) => <ExperienceCard experience={item} />}
                     contentContainerStyle={styles.listContent}
                     refreshControl={
-                        <RefreshControl
-                            refreshing={loading}
-                            onRefresh={refresh}
-                            tintColor={colors.primary}
-                        />
+                        <RefreshControl refreshing={loading} onRefresh={refresh} tintColor={colors.primary} />
                     }
                     ListEmptyComponent={
                         <View style={styles.empty}>
-                            <Text style={styles.emptyEmoji}>
-                                {searchQuery || activeFilter !== ALL_FILTER ? '🔍' : '🗄️'}
-                            </Text>
+                            <Ionicons
+                                name={searchQuery || activeFilter !== ALL_FILTER ? 'search-outline' : 'file-tray-outline'}
+                                size={48}
+                                color={colors.textMuted}
+                            />
                             <Text style={styles.emptyTitle}>
-                                {searchQuery || activeFilter !== ALL_FILTER
-                                    ? 'Nessun risultato'
-                                    : 'Il tuo Vault è vuoto'}
+                                {searchQuery || activeFilter !== ALL_FILTER ? 'Nessun risultato' : 'Il tuo Vault è vuoto'}
                             </Text>
                             <Text style={styles.emptyBody}>
                                 {searchQuery || activeFilter !== ALL_FILTER
@@ -160,10 +161,7 @@ export default function VaultScreen() {
                                     : 'Aggiungi la tua prima esperienza!'}
                             </Text>
                             {!searchQuery && activeFilter === ALL_FILTER && (
-                                <Pressable
-                                    style={styles.addBtnLarge}
-                                    onPress={() => router.push('/experience/new')}
-                                >
+                                <Pressable style={styles.addBtnLarge} onPress={() => router.push('/experience/new')}>
                                     <Text style={styles.addBtnLargeText}>+ Aggiungi esperienza</Text>
                                 </Pressable>
                             )}
@@ -175,29 +173,29 @@ export default function VaultScreen() {
     );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────────────────────────
 
-/**
- * Calcola gli anni totali di esperienza sommando la durata di ogni voce.
- * Per esperienze in corso usa la data attuale come fine.
- */
-function uniqueYears(exps: ReturnType<typeof useExperiences>['experiences']): number {
-    const now = new Date();
-    let totalMs = 0;
-    exps.forEach((e) => {
-        if (!e.start_date) return;
-        const start = new Date(e.start_date);
-        const end = e.is_current || !e.end_date ? now : new Date(e.end_date);
-        totalMs += Math.max(0, end.getTime() - start.getTime());
-    });
-    // Converti in anni (365.25 giorni) e arrotonda all'intero più vicino
-    return Math.round(totalMs / (1000 * 60 * 60 * 24 * 365.25));
-}
-
-function StatChip({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, iconName, color }: { label: string; value: number; iconName: string; color: string }) {
     return (
-        <View style={styles.statChip}>
-            <Text style={styles.statValue}>{value}</Text>
+        <View style={[
+            styles.statCard,
+            {
+                borderTopColor: color,          // bright top glow line
+                borderLeftColor: color + '20',
+                borderRightColor: color + '20',
+                borderBottomColor: color + '20',
+                // Soft colored shadow (iOS)
+                shadowColor: color,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.35,
+                shadowRadius: 8,
+                elevation: 4,
+            }
+        ]}>
+            <View style={[styles.statIconWrap, { backgroundColor: color + '20' }]}>
+                <Ionicons name={iconName as any} size={20} color={color} />
+            </View>
+            <Text style={[styles.statValue, { color }]}>{value}</Text>
             <Text style={styles.statLabel}>{label}</Text>
         </View>
     );
@@ -207,70 +205,83 @@ function StatChip({ label, value }: { label: string; value: number }) {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
+
+    // Header — compact (reduced paddingTop)
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-end',
         paddingHorizontal: spacing.lg,
-        paddingTop: 60,
-        paddingBottom: spacing.md,
+        paddingTop: 48,
+        paddingBottom: spacing.sm,
     },
-    greeting: { fontSize: 14, color: colors.textMuted, marginBottom: 2 },
-    headline: { fontSize: 26, fontWeight: '800', color: colors.textPrimary },
+    greeting: { fontSize: 13, color: colors.textMuted, marginBottom: 1 },
+    headline: { fontSize: 26, fontWeight: '800', color: colors.textPrimary, letterSpacing: -0.5 },
     addBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
         backgroundColor: colors.primary,
-        borderRadius: radius.md,
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        borderRadius: radius.full,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
     },
     addBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
-    // Stats
-    statsBar: {
+    // 4 stat cards — compact
+    statsRow: {
         flexDirection: 'row',
-        gap: spacing.sm,
+        gap: 8,
         paddingHorizontal: spacing.lg,
-        marginBottom: spacing.md,
+        marginBottom: spacing.sm,
     },
-    statChip: {
+    statCard: {
         flex: 1,
         backgroundColor: colors.bgCard,
-        borderRadius: radius.md,
-        padding: spacing.sm,
+        borderRadius: radius.lg,
+        paddingVertical: 12,
+        paddingHorizontal: 6,
         alignItems: 'center',
+        gap: 5,
         borderWidth: 1,
-        borderColor: colors.border,
     },
-    statValue: { fontSize: 20, fontWeight: '800', color: colors.primary },
-    statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+    statIconWrap: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statValue: { fontSize: 20, fontWeight: '800' },
+    statLabel: { fontSize: 10, color: colors.textMuted, textAlign: 'center' },
 
-    // Search
+    // Search — pill, compact
     searchWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.bgCard,
         marginHorizontal: spacing.lg,
-        marginBottom: spacing.sm,
-        borderRadius: radius.md,
+        marginBottom: spacing.xs,
+        borderRadius: radius.full,
         borderWidth: 1,
         borderColor: colors.border,
         paddingHorizontal: spacing.md,
         gap: spacing.sm,
+        height: 44,
     },
-    searchIcon: { fontSize: 16 },
     searchInput: {
         flex: 1,
         color: colors.textPrimary,
-        fontSize: 15,
-        paddingVertical: 12,
+        fontSize: 14,
     },
-    searchClear: { color: colors.textMuted, fontSize: 16, paddingHorizontal: 4 },
 
-    // Filters
+    // Filters — compact height
+    filtersContainer: { height: 46, marginBottom: 4 },
     filtersRow: {
         paddingHorizontal: spacing.lg,
         gap: spacing.xs,
-        paddingBottom: spacing.sm,
+        alignItems: 'center',
+        height: 46,
     },
     filter: {
         flexDirection: 'row',
@@ -280,36 +291,27 @@ const styles = StyleSheet.create({
         borderRadius: radius.full,
         paddingHorizontal: 12,
         paddingVertical: 7,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: colors.border,
-        marginRight: spacing.xs,
+        height: 34,
     },
-    filterEmoji: { fontSize: 13 },
-    filterLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+    filterLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
 
     // List
-    listContent: { paddingHorizontal: spacing.lg, paddingBottom: 100 },
+    listContent: { paddingHorizontal: spacing.lg, paddingBottom: SCREEN_PADDING_BOTTOM, paddingTop: 4 },
 
     // States
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
-    errorText: { color: colors.error, fontSize: 15 },
-    retryBtn: {
-        backgroundColor: colors.bgCard,
-        borderRadius: radius.md,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-    },
+    errorText: { color: colors.error, fontSize: 14 },
+    retryBtn: { backgroundColor: colors.bgCard, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
     retryText: { color: colors.primary, fontWeight: '700' },
-    empty: { alignItems: 'center', paddingTop: 80, gap: spacing.sm },
-    emptyEmoji: { fontSize: 48 },
-    emptyTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
-    emptyBody: { fontSize: 15, color: colors.textMuted, textAlign: 'center', maxWidth: 280 },
+
+    empty: { alignItems: 'center', paddingTop: 60, gap: spacing.sm },
+    emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+    emptyBody: { fontSize: 14, color: colors.textMuted, textAlign: 'center', maxWidth: 260 },
     addBtnLarge: {
-        backgroundColor: colors.primary,
-        borderRadius: radius.md,
-        paddingHorizontal: spacing.xl,
-        paddingVertical: spacing.md,
-        marginTop: spacing.md,
+        backgroundColor: colors.primary, borderRadius: radius.full,
+        paddingHorizontal: spacing.xl, paddingVertical: 12, marginTop: spacing.sm,
     },
-    addBtnLargeText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+    addBtnLargeText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
