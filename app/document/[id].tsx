@@ -1,32 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Dimensions,
+    Alert,
     Platform,
     Pressable,
-    Share,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-// expo-file-system v55 split APIs — the legacy module keeps cacheDirectory + downloadAsync
-import * as FileSystem from 'expo-file-system/legacy';
+import { WebView } from 'react-native-webview';
+import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getDocumentById } from '../../src/services/documentService';
 import { GeneratedDocument } from '../../src/types/database';
 import { colors, radius, spacing, typography } from '../../src/theme';
-
-// Lazy-import react-native-pdf only when rendering
-// This prevents build errors on platforms that don't support it
-let Pdf: any;
-try {
-    Pdf = require('react-native-pdf').default;
-} catch {
-    Pdf = null;
-}
-
-const { width, height } = Dimensions.get('window');
 
 export default function DocumentViewerScreen() {
     const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,7 +23,13 @@ export default function DocumentViewerScreen() {
     const [doc, setDoc] = useState<GeneratedDocument | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [sharing, setSharing] = useState(false);
+
+    // HTML fetched from Supabase (used for PDF export)
+    const [htmlContent, setHtmlContent] = useState<string | null>(null);
+    const [exporting, setExporting] = useState(false);
+
+    // WebView loading state
+    const [webLoading, setWebLoading] = useState(true);
 
     useEffect(() => {
         if (!id) return;
@@ -43,6 +37,13 @@ export default function DocumentViewerScreen() {
             try {
                 const data = await getDocumentById(id);
                 setDoc(data);
+
+                // Pre-fetch HTML so we can use it for PDF export without re-downloading
+                if (data?.pdf_url) {
+                    const res = await fetch(data.pdf_url);
+                    const text = await res.text();
+                    setHtmlContent(text);
+                }
             } catch (e) {
                 setError((e as Error).message);
             } finally {
@@ -51,30 +52,34 @@ export default function DocumentViewerScreen() {
         })();
     }, [id]);
 
-    const handleShare = async () => {
-        if (!doc?.pdf_url) return;
+    // ── Export PDF ──────────────────────────────────────────────────────────────
+
+    const handleExportPdf = useCallback(async () => {
+        const html = htmlContent;
+        if (!html) {
+            Alert.alert('Errore', 'Contenuto del documento non ancora caricato. Riprova.');
+            return;
+        }
         try {
-            setSharing(true);
-            if (Platform.OS === 'ios' || Platform.OS === 'android') {
-                // Download to cache then share
-                const cacheDir = FileSystem.cacheDirectory;
-                if (!cacheDir) throw new Error('Cache directory non disponibile');
-                const localUri = cacheDir + `careervault_${doc.id}.pdf`;
-                const { uri } = await FileSystem.downloadAsync(doc.pdf_url, localUri);
-                if (await Sharing.isAvailableAsync()) {
-                    await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
-                }
+            setExporting(true);
+            const { uri } = await Print.printToFileAsync({ html, base64: false });
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, {
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Salva o condividi il PDF',
+                    UTI: 'com.adobe.pdf',
+                });
             } else {
-                await Share.share({ url: doc.pdf_url, title: 'CareerVault PDF' });
+                Alert.alert('Condivisione non disponibile', `File salvato in: ${uri}`);
             }
         } catch (e) {
-            console.error('Share error:', e);
+            Alert.alert('Errore esportazione PDF', (e as Error).message);
         } finally {
-            setSharing(false);
+            setExporting(false);
         }
-    };
+    }, [htmlContent]);
 
-    // ── Loading ─────────────────────────────────────────────────────────────────
+    // ── Render: Loading ─────────────────────────────────────────────────────────
 
     if (loading) {
         return (
@@ -85,7 +90,7 @@ export default function DocumentViewerScreen() {
         );
     }
 
-    // ── Error / no PDF ──────────────────────────────────────────────────────────
+    // ── Render: Error / not found ───────────────────────────────────────────────
 
     if (error || !doc) {
         return (
@@ -98,6 +103,8 @@ export default function DocumentViewerScreen() {
             </View>
         );
     }
+
+    // ── Render: Not completed ───────────────────────────────────────────────────
 
     if (doc.status !== 'completed' || !doc.pdf_url) {
         return (
@@ -122,7 +129,7 @@ export default function DocumentViewerScreen() {
         );
     }
 
-    // ── PDF Viewer ───────────────────────────────────────────────────────────────
+    // ── Render: Document Viewer ─────────────────────────────────────────────────
 
     return (
         <View style={styles.container}>
@@ -135,42 +142,39 @@ export default function DocumentViewerScreen() {
                     {doc.doc_type === 'cv' ? '📄 CV' : '✉️ Cover Letter'}
                 </Text>
                 <Pressable
-                    style={[styles.shareBtn, sharing && { opacity: 0.5 }]}
-                    onPress={handleShare}
-                    disabled={sharing}
+                    style={[styles.exportBtn, exporting && { opacity: 0.5 }]}
+                    onPress={handleExportPdf}
+                    disabled={exporting}
                 >
-                    {sharing ? (
+                    {exporting ? (
                         <ActivityIndicator color="#fff" size="small" />
                     ) : (
-                        <Text style={styles.shareBtnText}>📤 Condividi</Text>
+                        <Text style={styles.exportBtnText}>⬇ PDF</Text>
                     )}
                 </Pressable>
             </View>
 
-            {/* PDF render */}
-            {Pdf ? (
-                <Pdf
-                    source={{ uri: doc.pdf_url, cache: true }}
-                    style={styles.pdf}
-                    onError={(err: any) => setError(String(err))}
-                    trustAllCerts={false}
-                    enablePaging
-                    horizontal={false}
-                />
-            ) : (
-                // Fallback for platforms where react-native-pdf is unavailable (e.g., Expo Go web)
-                <View style={styles.center}>
-                    <Text style={{ fontSize: 40 }}>📄</Text>
-                    <Text style={styles.statusTitle}>PDF pronto</Text>
-                    <Text style={styles.errorBody}>
-                        Il visualizzatore PDF richiede una build nativa.{'\n'}
-                        Usa "Condividi" per aprire il file.
-                    </Text>
-                    <Pressable style={styles.shareBtn} onPress={handleShare}>
-                        <Text style={styles.shareBtnText}>📤 Condividi PDF</Text>
-                    </Pressable>
+            {/* WebView renders the HTML document */}
+            {webLoading && (
+                <View style={styles.webLoadingOverlay}>
+                    <ActivityIndicator color={colors.primary} size="large" />
+                    <Text style={styles.loadingText}>Rendering documento…</Text>
                 </View>
             )}
+            <WebView
+                source={{ uri: doc.pdf_url }}
+                style={styles.webView}
+                onLoadEnd={() => setWebLoading(false)}
+                onError={(e) => {
+                    setWebLoading(false);
+                    setError('Errore nel caricamento del documento: ' + e.nativeEvent.description);
+                }}
+                javaScriptEnabled
+                domStorageEnabled
+                originWhitelist={['*']}
+                // Allow the user to scroll the HTML
+                scrollEnabled
+            />
         </View>
     );
 }
@@ -179,6 +183,7 @@ export default function DocumentViewerScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
+
     center: {
         flex: 1,
         backgroundColor: colors.bg,
@@ -205,7 +210,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 56,
+        paddingTop: Platform.OS === 'ios' ? 56 : 36,
         paddingBottom: 12,
         paddingHorizontal: spacing.lg,
         backgroundColor: colors.bgCard,
@@ -215,20 +220,26 @@ const styles = StyleSheet.create({
     navSide: { width: 80 },
     navBack: { color: colors.primary, fontSize: 15, fontWeight: '600' },
     navTitle: { ...typography.h3, fontSize: 16, flex: 1, textAlign: 'center' },
-    shareBtn: {
+
+    exportBtn: {
         backgroundColor: colors.primary,
         borderRadius: radius.md,
         paddingHorizontal: 14,
         paddingVertical: 8,
-        width: 110,
+        width: 80,
         alignItems: 'center',
     },
-    shareBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+    exportBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-    pdf: {
-        flex: 1,
-        width,
-        height,
-        backgroundColor: '#1a1a2e',
+    webView: { flex: 1 },
+
+    webLoadingOverlay: {
+        position: 'absolute',
+        top: 120,
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        alignItems: 'center',
+        gap: 12,
     },
 });
