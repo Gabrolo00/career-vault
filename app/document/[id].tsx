@@ -1,15 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { WebView } from 'react-native-webview';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getDocumentById } from '../../src/services/documentService';
@@ -23,13 +23,9 @@ export default function DocumentViewerScreen() {
     const [doc, setDoc] = useState<GeneratedDocument | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-
-    // HTML fetched from Supabase (used for PDF export)
     const [htmlContent, setHtmlContent] = useState<string | null>(null);
     const [exporting, setExporting] = useState(false);
-
-    // WebView loading state
-    const [webLoading, setWebLoading] = useState(true);
+    const [previewing, setPreviewing] = useState(false);
 
     useEffect(() => {
         if (!id) return;
@@ -37,8 +33,7 @@ export default function DocumentViewerScreen() {
             try {
                 const data = await getDocumentById(id);
                 setDoc(data);
-
-                // Pre-fetch HTML so we can use it for PDF export without re-downloading
+                // Pre-fetch HTML so expo-print can use it for PDF export
                 if (data?.pdf_url) {
                     const res = await fetch(data.pdf_url);
                     const text = await res.text();
@@ -52,17 +47,34 @@ export default function DocumentViewerScreen() {
         })();
     }, [id]);
 
+    // ── Preview (native render via Print) ───────────────────────────────────────
+
+    const handlePreview = useCallback(async () => {
+        if (!htmlContent) {
+            Alert.alert('Errore', 'Contenuto non ancora caricato. Attendi e riprova.');
+            return;
+        }
+        try {
+            setPreviewing(true);
+            await Print.printAsync({ html: htmlContent });
+        } catch (e) {
+            console.log('Preview closed');
+        } finally {
+            setPreviewing(false);
+        }
+    }, [htmlContent]);
+
     // ── Export PDF ──────────────────────────────────────────────────────────────
 
+
     const handleExportPdf = useCallback(async () => {
-        const html = htmlContent;
-        if (!html) {
-            Alert.alert('Errore', 'Contenuto del documento non ancora caricato. Riprova.');
+        if (!htmlContent) {
+            Alert.alert('Errore', 'Contenuto non ancora caricato. Attendi e riprova.');
             return;
         }
         try {
             setExporting(true);
-            const { uri } = await Print.printToFileAsync({ html, base64: false });
+            const { uri } = await Print.printToFileAsync({ html: htmlContent, base64: false });
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(uri, {
                     mimeType: 'application/pdf',
@@ -70,7 +82,7 @@ export default function DocumentViewerScreen() {
                     UTI: 'com.adobe.pdf',
                 });
             } else {
-                Alert.alert('Condivisione non disponibile', `File salvato in: ${uri}`);
+                Alert.alert('PDF generato', `Salvato in: ${uri}`);
             }
         } catch (e) {
             Alert.alert('Errore esportazione PDF', (e as Error).message);
@@ -90,8 +102,6 @@ export default function DocumentViewerScreen() {
         );
     }
 
-    // ── Render: Error / not found ───────────────────────────────────────────────
-
     if (error || !doc) {
         return (
             <View style={styles.center}>
@@ -103,8 +113,6 @@ export default function DocumentViewerScreen() {
             </View>
         );
     }
-
-    // ── Render: Not completed ───────────────────────────────────────────────────
 
     if (doc.status !== 'completed' || !doc.pdf_url) {
         return (
@@ -129,53 +137,74 @@ export default function DocumentViewerScreen() {
         );
     }
 
-    // ── Render: Document Viewer ─────────────────────────────────────────────────
+    // ── Render: Document Actions ────────────────────────────────────────────────
+
+    const docLabel = doc.doc_type === 'cv' ? 'Curriculum Vitae' : 'Cover Letter';
+    const docEmoji = doc.doc_type === 'cv' ? '📄' : '✉️';
+    const createdAt = new Date(doc.created_at).toLocaleDateString('it-IT', {
+        day: '2-digit', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    });
 
     return (
-        <View style={styles.container}>
-            {/* Navbar */}
-            <View style={styles.navbar}>
-                <Pressable onPress={() => router.back()} style={styles.navSide}>
-                    <Text style={styles.navBack}>← Indietro</Text>
-                </Pressable>
-                <Text style={styles.navTitle} numberOfLines={1}>
-                    {doc.doc_type === 'cv' ? '📄 CV' : '✉️ Cover Letter'}
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+            {/* Back nav */}
+            <Pressable onPress={() => router.back()} style={styles.backNav}>
+                <Text style={styles.backNavText}>← Storico</Text>
+            </Pressable>
+
+            {/* Document card */}
+            <View style={styles.card}>
+                <Text style={styles.docEmoji}>{docEmoji}</Text>
+                <Text style={styles.docTitle}>{docLabel}</Text>
+                <Text style={styles.docDate}>{createdAt}</Text>
+
+                <View style={styles.divider} />
+
+                <Text style={styles.jdLabel}>Job Description:</Text>
+                <Text style={styles.jdText} numberOfLines={4}>
+                    {doc.jd_text}
                 </Text>
+            </View>
+
+            {/* Loading HTML indicator */}
+            {!htmlContent && (
+                <View style={styles.htmlLoadingRow}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.htmlLoadingText}>Preparazione PDF in corso…</Text>
+                </View>
+            )}
+
+            {/* Action buttons */}
+            <View style={styles.actions}>
                 <Pressable
-                    style={[styles.exportBtn, exporting && { opacity: 0.5 }]}
-                    onPress={handleExportPdf}
-                    disabled={exporting}
+                    style={[styles.btnPrimary, previewing && styles.btnDisabled]}
+                    onPress={handlePreview}
+                    disabled={previewing}
                 >
-                    {exporting ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                        <Text style={styles.exportBtnText}>⬇ PDF</Text>
-                    )}
+                    {previewing
+                        ? <ActivityIndicator color="#fff" size="small" />
+                        : <Text style={styles.btnPrimaryText}>👁  Visualizza documento</Text>
+                    }
+                </Pressable>
+
+                <Pressable
+                    style={[styles.btnSecondary, (!htmlContent || exporting) && styles.btnDisabled]}
+                    onPress={handleExportPdf}
+                    disabled={!htmlContent || exporting}
+                >
+                    {exporting
+                        ? <ActivityIndicator color={colors.primary} size="small" />
+                        : <Text style={styles.btnSecondaryText}>⬇  Scarica PDF</Text>
+                    }
                 </Pressable>
             </View>
 
-            {/* WebView renders the HTML document */}
-            {webLoading && (
-                <View style={styles.webLoadingOverlay}>
-                    <ActivityIndicator color={colors.primary} size="large" />
-                    <Text style={styles.loadingText}>Rendering documento…</Text>
-                </View>
-            )}
-            <WebView
-                source={{ uri: doc.pdf_url }}
-                style={styles.webView}
-                onLoadEnd={() => setWebLoading(false)}
-                onError={(e) => {
-                    setWebLoading(false);
-                    setError('Errore nel caricamento del documento: ' + e.nativeEvent.description);
-                }}
-                javaScriptEnabled
-                domStorageEnabled
-                originWhitelist={['*']}
-                // Allow the user to scroll the HTML
-                scrollEnabled
-            />
-        </View>
+            <Text style={styles.hint}>
+                "Visualizza" apre il documento nel browser.{'\n'}
+                "Scarica PDF" genera e condivide un PDF nativo.
+            </Text>
+        </ScrollView>
     );
 }
 
@@ -183,14 +212,12 @@ export default function DocumentViewerScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.bg },
+    content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: 80 },
 
     center: {
-        flex: 1,
-        backgroundColor: colors.bg,
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: spacing.xl,
-        gap: spacing.md,
+        flex: 1, backgroundColor: colors.bg,
+        alignItems: 'center', justifyContent: 'center',
+        padding: spacing.xl, gap: spacing.md,
     },
     loadingText: { ...typography.body, color: colors.textMuted },
     errorEmoji: { fontSize: 40 },
@@ -199,47 +226,45 @@ const styles = StyleSheet.create({
     statusTitle: { ...typography.h3, textAlign: 'center' },
 
     backBtn: {
-        backgroundColor: colors.bgCard,
-        borderRadius: radius.md,
-        paddingHorizontal: spacing.xl,
-        paddingVertical: spacing.sm,
+        backgroundColor: colors.bgCard, borderRadius: radius.md,
+        paddingHorizontal: spacing.xl, paddingVertical: spacing.sm,
     },
     backText: { color: colors.primary, fontWeight: '700' },
 
-    navbar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: Platform.OS === 'ios' ? 56 : 36,
-        paddingBottom: 12,
-        paddingHorizontal: spacing.lg,
-        backgroundColor: colors.bgCard,
-        borderBottomWidth: 1,
-        borderColor: colors.border,
-    },
-    navSide: { width: 80 },
-    navBack: { color: colors.primary, fontSize: 15, fontWeight: '600' },
-    navTitle: { ...typography.h3, fontSize: 16, flex: 1, textAlign: 'center' },
+    backNav: { marginTop: Platform.OS === 'ios' ? 52 : 32, marginBottom: 4 },
+    backNavText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
 
-    exportBtn: {
-        backgroundColor: colors.primary,
-        borderRadius: radius.md,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        width: 80,
-        alignItems: 'center',
+    card: {
+        backgroundColor: colors.bgCard, borderRadius: radius.xl,
+        padding: spacing.lg, gap: spacing.sm,
+        borderWidth: 1, borderColor: colors.border,
     },
-    exportBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+    docEmoji: { fontSize: 40, textAlign: 'center' },
+    docTitle: { ...typography.h2, textAlign: 'center' },
+    docDate: { fontSize: 12, color: colors.textMuted, textAlign: 'center' },
+    divider: { height: 1, backgroundColor: colors.border, marginVertical: spacing.sm },
+    jdLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600', textTransform: 'uppercase' },
+    jdText: { fontSize: 14, color: colors.textPrimary, lineHeight: 20 },
 
-    webView: { flex: 1 },
+    htmlLoadingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' },
+    htmlLoadingText: { color: colors.textMuted, fontSize: 13 },
 
-    webLoadingOverlay: {
-        position: 'absolute',
-        top: 120,
-        left: 0,
-        right: 0,
-        zIndex: 10,
-        alignItems: 'center',
-        gap: 12,
+    actions: { gap: spacing.md },
+
+    btnPrimary: {
+        backgroundColor: colors.primary, borderRadius: radius.lg,
+        paddingVertical: 16, alignItems: 'center',
     },
+    btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+
+    btnSecondary: {
+        backgroundColor: colors.bgCard, borderRadius: radius.lg,
+        paddingVertical: 16, alignItems: 'center',
+        borderWidth: 2, borderColor: colors.primary,
+    },
+    btnSecondaryText: { color: colors.primary, fontWeight: '700', fontSize: 16 },
+
+    btnDisabled: { opacity: 0.4 },
+
+    hint: { fontSize: 12, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
 });
