@@ -17,6 +17,7 @@ const TAB_CONFIG = [
     { name: 'index', label: 'Vault', icon: 'server' },
     { name: 'generate', label: 'Genera', icon: 'flash' },
     { name: 'history', label: 'Storico', icon: 'time' },
+    { name: 'profile', label: 'Profilo', icon: 'person' },
 ] as const;
 
 function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
@@ -69,6 +70,7 @@ export default function TabsLayout() {
             <Tabs.Screen name="index" />
             <Tabs.Screen name="generate" />
             <Tabs.Screen name="history" />
+            <Tabs.Screen name="profile" />
         </Tabs>
     );
 }

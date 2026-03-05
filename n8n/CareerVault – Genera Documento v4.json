@@ -1,0 +1,366 @@
+{
+    "name": "CareerVault – Genera Documento v4",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "career-vault",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "n1-webhook",
+            "name": "🔔 Webhook",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                200,
+                -400
+            ],
+            "webhookId": "b7157b77-6be6-4192-9f1d-8bb9ae252c62"
+        },
+        {
+            "parameters": {
+                "jsCode": "// ── Config: inject secrets + extract webhook body ──────────────────────\nconst supabaseUrl = \"YOUR_SUPABASE_URL\";\nconst supabaseKey = \"YOUR_SUPABASE_SERVICE_ROLE_KEY\";\nconst openaiKey   = \"YOUR_OPENAI_API_KEY\";\n\nconst body = $input.first().json.body || $input.first().json;\n\nreturn [{ json: { supabaseUrl, supabaseKey, openaiKey, ...body } }];"
+            },
+            "id": "n2-config",
+            "name": "Config",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                420,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "url": "={{ $('Config').first().json.supabaseUrl + '/rest/v1/experiences?select=id,title,organization,description,start_date,end_date,is_current,skills,tags,type,location&user_id=eq.' + $('Config').first().json.userId + '&order=start_date.desc' }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $('Config').first().json.supabaseKey }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $('Config').first().json.supabaseKey }}"
+                        },
+                        {
+                            "name": "Accept",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "n3-fetch-exp",
+            "name": "🗄 Fetch Experiences",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                640,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// ── Build the prompt for the AI agent ─────────────────────────────────\nconst cfg = $('Config').first().json;\nconst expItems = $input.all();\nconst first = expItems[0]?.json;\nconst experiences = Array.isArray(first) ? first : expItems.map(i => i.json).filter(e => e && e.title);\n\nconst { userId, docType, jobDescription, documentId, templateId, templateHtml, profile, openaiKey, supabaseUrl, supabaseKey } = cfg;\n\n// Format experiences as a readable text block for the AI\nconst expText = experiences.length === 0\n  ? '(Nessuna esperienza disponibile)'\n  : experiences.map(e => {\n      const range = e.is_current\n        ? `${e.start_date || '?'} – Presente`\n        : `${e.start_date || '?'} – ${e.end_date || '?'}`;\n      const skills = (e.skills || []).join(', ');\n      return `ID:${e.id} | [${(e.type||'work').toUpperCase()}] ${e.title} @ ${e.organization||'N/A'} (${range})${e.location ? ' · ' + e.location : ''}\\n  Descrizione: ${(e.description||'').slice(0,400)}\\n  Competenze: ${skills||'N/A'}`;\n    }).join('\\n\\n');\n\nconst profileText = profile\n  ? `Nome: ${profile.fullName||''}\\nRuolo: ${profile.headline||''}\\nCittà: ${profile.city||''}\\nTelefono: ${profile.phone||''}\\nLinkedIn: ${profile.linkedinUrl||''}\\nPortfolio: ${profile.portfolioUrl||''}`\n  : '(Profilo non disponibile)';\n\nconst systemPrompt = `Sei un esperto career coach italiano specializzato in CV ATS-friendly.\nHai ricevuto le esperienze di un candidato e una Job Description.\n\nIL TUO COMPITO:\n1. Seleziona le esperienze più rilevanti per la Job Description (max 4 esperienze lavorative, max 3 education)\n2. Per ogni esperienza selezionata, scrivi una descrizione ottimizzata (2-4 frasi, keywords dalla JD, risultati concreti)\n3. Genera un profilo professionale di 3-4 righe (profile_summary)\n4. Estrai una lista di competenze tecniche rilevanti per la JD (max 12)\n5. Restituisci SOLO un JSON valido, senza markdown, senza spiegazioni.\n\nSTRUTTURA JSON RICHIESTA:\n{\n  \"profile_summary\": \"stringa\",\n  \"experiences\": [\n    {\n      \"title\": \"stringa\",\n      \"organization\": \"stringa\",\n      \"location\": \"stringa o null\",\n      \"date_range\": \"MMM YYYY – MMM YYYY o Presente\",\n      \"description\": \"paragrafo ottimizzato\",\n      \"skills\": [\"skill1\", \"skill2\"]\n    }\n  ],\n  \"education\": [\n    {\n      \"title\": \"stringa\",\n      \"organization\": \"stringa\",\n      \"date_range\": \"stringa\",\n      \"description\": \"stringa o null\"\n    }\n  ],\n  \"certifications\": [\n    {\n      \"title\": \"stringa\",\n      \"organization\": \"stringa\",\n      \"date_range\": \"stringa\"\n    }\n  ],\n  \"skills\": [\"skill1\", \"skill2\", \"...\"],\n  \"languages\": [\n    { \"language\": \"Italiano\", \"level\": \"Madrelingua\" }\n  ]\n}`;\n\nconst userPrompt = `PROFILO CANDIDATO:\\n${profileText}\\n\\nESPERIENZE DISPONIBILI:\\n${expText}\\n\\nJOB DESCRIPTION:\\n${jobDescription}\\n\\nRestituisci il JSON strutturato come richiesto.`;\n\nreturn [{ json: {\n  userId, docType, jobDescription, documentId,\n  templateId, templateHtml, profile,\n  openaiKey, supabaseUrl, supabaseKey,\n  systemPrompt, userPrompt\n} }];"
+            },
+            "id": "n4-build-prompt",
+            "name": "🧠 Build AI Prompt",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                860,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.openai.com/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.openaiKey }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ { model: 'gpt-4o', messages: [{ role: 'system', content: $json.systemPrompt }, { role: 'user', content: $json.userPrompt }], temperature: 0.4, max_tokens: 4000, response_format: { type: 'json_object' } } }}",
+                "options": {}
+            },
+            "id": "n5-openai",
+            "name": "🤖 OpenAI — JSON Mode",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1080,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// ── Fill Template: parse AI JSON and inject into HTML template ─────────\nconst cfg = $('Config').first().json;\nconst buildData = $('🧠 Build AI Prompt').first().json;\nconst aiRaw = $input.first().json.choices[0].message.content;\n\n// 1. Parse AI JSON\nlet cvData;\ntry {\n  const cleaned = aiRaw.replace(/^```(?:json)?\\n?/, '').replace(/\\n?```$/, '').trim();\n  cvData = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('AI output is not valid JSON: ' + aiRaw.slice(0, 300));\n}\n\n// 2. Profile fields\nconst profile = buildData.profile || {};\nconst fullName = (profile.fullName || cvData.full_name || 'Nome Cognome').trim();\nconst nameParts = fullName.split(' ');\nconst firstName = nameParts[0] || '';\nconst lastName  = nameParts.slice(1).join(' ') || '';\nconst initials  = nameParts.map(p => p[0]||'').join('').toUpperCase().slice(0,2);\nconst tid = buildData.templateId || 'modern';\n\n// 3. Block builders\nfunction experienceEntry(e, t) {\n  const dr = e.date_range || '';\n  const loc = e.location ? ` · ${e.location}` : '';\n  const desc = e.description ? `<div class=\"entry-desc\">${e.description}</div>` : '';\n  const tags = (e.skills||[]).length ? `<div class=\"entry-tags\">${(e.skills||[]).map(s=>`<span class=\"entry-tag\">${s}</span>`).join('')}</div>` : '';\n  const ctags = (e.skills||[]).length ? `<div class=\"entry-card-tags\">${(e.skills||[]).map(s=>`<span class=\"entry-card-tag\">${s}</span>`).join('')}</div>` : '';\n  if (t === 'minimal') return `<div class=\"entry\"><div class=\"entry-header\"><div class=\"entry-title\">${e.title}</div><div class=\"entry-date\">${dr}</div></div><div class=\"entry-org\">${e.organization||''}${loc}</div>${desc}</div>`;\n  if (t === 'creative') return `<div class=\"entry-card\"><div class=\"entry-card-top\"><div class=\"entry-card-title\">${e.title}</div><div class=\"entry-card-date\">${dr}</div></div><div class=\"entry-card-org\">${e.organization||''}${loc}</div>${e.description?`<div class=\"entry-card-desc\">${e.description}</div>`:''} ${ctags}</div>`;\n  return `<div class=\"entry\"><div class=\"entry-left\"><div class=\"entry-bullet\"></div><div class=\"entry-line\"></div></div><div class=\"entry-right\"><div class=\"entry-meta\">${dr}${loc}</div><div class=\"entry-title\">${e.title}</div><div class=\"entry-org\">${e.organization||''}</div>${desc}${tags}</div></div>`;\n}\n\nfunction educEntry(e, t) {\n  const dr = e.date_range || '';\n  const desc = e.description ? `<div class=\"entry-desc\">${e.description}</div>` : '';\n  if (t === 'minimal') return `<div class=\"entry\"><div class=\"entry-header\"><div class=\"entry-title\">${e.title}</div><div class=\"entry-date\">${dr}</div></div><div class=\"entry-org\">${e.organization||''}</div>${desc}</div>`;\n  if (t === 'creative') return `<div class=\"entry-card\"><div class=\"entry-card-top\"><div class=\"entry-card-title\">${e.title}</div><div class=\"entry-card-date\">${dr}</div></div><div class=\"entry-card-org\">${e.organization||''}</div>${desc?`<div class=\"entry-card-desc\">${e.description}</div>`:''}</div>`;\n  return `<div class=\"entry\"><div class=\"entry-left\"><div class=\"entry-bullet\"></div><div class=\"entry-line\"></div></div><div class=\"entry-right\"><div class=\"entry-meta\">${dr}</div><div class=\"entry-title\">${e.title}</div><div class=\"entry-org\">${e.organization||''}</div>${desc}</div></div>`;\n}\n\nfunction skillsHtml(skills, t) {\n  if (!skills || !skills.length) return '';\n  if (t === 'modern')   return skills.map(s=>`<span class=\"skill-tag\">${s}</span>`).join('');\n  if (t === 'creative') return skills.map(s=>`<span class=\"skill-pill\">${s}</span>`).join('');\n  return skills.map(s=>`<div class=\"skill-line\">${s}</div>`).join('');\n}\n\nfunction langPercent(lv) { return ({A1:15,A2:28,B1:45,B2:62,C1:80,C2:95,Native:100,Madrelingua:100})[lv]||50; }\nfunction langsHtml(langs, t) {\n  if (!langs || !langs.length) return '';\n  if (t === 'minimal') return langs.map(l=>`<div class=\"lang-item\"><div class=\"lang-name-row\"><span class=\"lang-name\">${l.language}</span><span class=\"lang-level\">${l.level||''}</span></div><div class=\"lang-bar\"><div class=\"lang-bar-fill\" style=\"width:${langPercent(l.level)}%\"></div></div></div>`).join('');\n  return langs.map(l=>`<div class=\"side-item\"><div class=\"side-item-label\">${l.language}</div><div class=\"side-item-sub\">${l.level||''}</div></div>`).join('');\n}\n\n// 4. Build all blocks\nconst experiencesHtml    = (cvData.experiences    ||[]).map(e=>experienceEntry(e,tid)).join('\\n');\nconst educationHtml      = (cvData.education      ||[]).map(e=>educEntry(e,tid)).join('\\n');\nconst certificationsHtml = (cvData.certifications ||[]).map(e=>educEntry(e,tid)).join('\\n');\nconst skillsList         = skillsHtml(cvData.skills, tid);\nconst languagesHtml      = langsHtml(cvData.languages, tid);\n\n// 5. Replace placeholders\nconst map = {\n  '{{full_name}}':           fullName,\n  '{{first_name}}':          firstName,\n  '{{last_name}}':           lastName,\n  '{{initials}}':            initials,\n  '{{headline}}':            profile.headline     || '',\n  '{{city}}':                profile.city         || '',\n  '{{phone}}':               profile.phone        || '',\n  '{{linkedin_url}}':        profile.linkedinUrl  || '',\n  '{{portfolio_url}}':       profile.portfolioUrl || '',\n  '{{avatar_url}}':          profile.avatarUrl    || '',\n  '{{profile_summary}}':     cvData.profile_summary || '',\n  '{{experiences_html}}':    experiencesHtml,\n  '{{education_html}}':      educationHtml,\n  '{{certifications_html}}': certificationsHtml,\n  '{{skills_list}}':         skillsList,\n  '{{skills_section_html}}': skillsList,\n  '{{languages_html}}':      languagesHtml,\n};\n\nlet html = buildData.templateHtml || '';\nfor (const [k, v] of Object.entries(map)) {\n  html = html.split(k).join(v || '');\n}\n// Remove unfilled Handlebars-style blocks\nhtml = html\n  .replace(/\\{\\{#if [^}]+\\}\\}[\\s\\S]*?\\{\\{\\/if\\}\\}/g, '')\n  .replace(/\\{\\{[^}]+\\}\\}/g, '');\n\nconst filename = `cv-${buildData.userId}-${Date.now()}.html`;\n\nreturn [{ json: {\n  userId: buildData.userId,\n  documentId: buildData.documentId,\n  supabaseUrl: cfg.supabaseUrl,\n  supabaseKey: cfg.supabaseKey,\n  html,\n  filename,\n} }];"
+            },
+            "id": "n6-fill-template",
+            "name": "📄 Fill Template",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1300,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "={{ $json.supabaseUrl + '/storage/v1/object/documents/' + $json.filename }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $json.supabaseKey }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.supabaseKey }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "text/html; charset=utf-8"
+                        },
+                        {
+                            "name": "x-upsert",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "raw",
+                "rawContentType": "text/html",
+                "body": "={{ $json.html }}",
+                "options": {}
+            },
+            "id": "n7-upload",
+            "name": "☁️ Upload to Storage",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1520,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const data = $('📄 Fill Template').first().json;\nconst pdfUrl = data.supabaseUrl + '/storage/v1/object/public/documents/' + data.filename;\nreturn [{ json: { ...data, pdf_url: pdfUrl } }];"
+            },
+            "id": "n8-build-url",
+            "name": "🔗 Build URL",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1720,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "method": "PATCH",
+                "url": "={{ $json.supabaseUrl + '/rest/v1/generated_documents?id=eq.' + $json.documentId }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "apikey",
+                            "value": "={{ $json.supabaseKey }}"
+                        },
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $json.supabaseKey }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        },
+                        {
+                            "name": "Prefer",
+                            "value": "return=minimal"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ { status: 'completed', pdf_url: $json.pdf_url } }}",
+                "options": {}
+            },
+            "id": "n9-update-db",
+            "name": "💾 Update DB",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                1940,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const d = $('🔗 Build URL').first().json;\nreturn [{ json: { pdf_url: d.pdf_url, request_id: d.documentId } }];"
+            },
+            "id": "n10-response",
+            "name": "📬 Prepare Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                2160,
+                -400
+            ]
+        },
+        {
+            "parameters": {
+                "respondWith": "json",
+                "responseBody": "={{ JSON.stringify($json) }}",
+                "options": {}
+            },
+            "id": "n11-respond",
+            "name": "✅ Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [
+                2380,
+                -400
+            ]
+        }
+    ],
+    "connections": {
+        "🔔 Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Config",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Config": {
+            "main": [
+                [
+                    {
+                        "node": "🗄 Fetch Experiences",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🗄 Fetch Experiences": {
+            "main": [
+                [
+                    {
+                        "node": "🧠 Build AI Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🧠 Build AI Prompt": {
+            "main": [
+                [
+                    {
+                        "node": "🤖 OpenAI — JSON Mode",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🤖 OpenAI — JSON Mode": {
+            "main": [
+                [
+                    {
+                        "node": "📄 Fill Template",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📄 Fill Template": {
+            "main": [
+                [
+                    {
+                        "node": "☁️ Upload to Storage",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "☁️ Upload to Storage": {
+            "main": [
+                [
+                    {
+                        "node": "🔗 Build URL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "🔗 Build URL": {
+            "main": [
+                [
+                    {
+                        "node": "💾 Update DB",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "💾 Update DB": {
+            "main": [
+                [
+                    {
+                        "node": "📬 Prepare Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "📬 Prepare Response": {
+            "main": [
+                [
+                    {
+                        "node": "✅ Respond to Webhook",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1",
+        "binaryMode": "separate",
+        "availableInMCP": false,
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "meta": {
+        "instanceId": "80b6b786edf888c5d048081b43be8023d369c6f9653dee703193b04045d0cc05"
+    },
+    "tags": []
+}

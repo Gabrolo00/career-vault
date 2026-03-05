@@ -31,6 +31,42 @@ const DOC_TYPES: { value: DocumentType; label: string; iconName: string; desc: s
     },
 ];
 
+// ─── CV Template config ───────────────────────────────────────────────────────
+
+export type TemplateId = 'modern' | 'minimal' | 'creative';
+
+interface TemplateOption {
+    id: TemplateId;
+    label: string;
+    emoji: string;
+    accent: string;
+    desc: string;
+}
+
+const CV_TEMPLATES: TemplateOption[] = [
+    {
+        id: 'modern',
+        label: 'Moderno',
+        emoji: '⚡',
+        accent: colors.primary,
+        desc: 'Struttura pulita con accenti blu. Ideale per tech e startup.',
+    },
+    {
+        id: 'minimal',
+        label: 'Minimal',
+        emoji: '◻',
+        accent: colors.textSecondary,
+        desc: 'Bianco e nero elegante. Perfetto per ambienti corporate.',
+    },
+    {
+        id: 'creative',
+        label: 'Creativo',
+        emoji: '🎨',
+        accent: colors.project,
+        desc: 'Layout audace con sidebar colorata. Per design e marketing.',
+    },
+];
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function GenerateScreen() {
@@ -38,6 +74,7 @@ export default function GenerateScreen() {
     const { generate } = useDocuments();
 
     const [docType, setDocType] = useState<DocumentType>('cv');
+    const [templateId, setTemplateId] = useState<TemplateId>('modern');
     const [jdText, setJdText] = useState('');
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<GeneratedDocument | null>(null);
@@ -50,7 +87,7 @@ export default function GenerateScreen() {
             setGenerating(true);
             setGenError(null);
             setResult(null);
-            const doc = await generate(docType, jdText.trim());
+            const doc = await generate(docType, jdText.trim(), templateId);
             setResult(doc);
         } catch (e) {
             setGenError((e as Error).message);
@@ -98,6 +135,59 @@ export default function GenerateScreen() {
                         );
                     })}
                 </View>
+
+                {/* Template selector — solo per CV */}
+                {docType === 'cv' && (
+                    <View style={styles.templateSection}>
+                        <Text style={styles.sectionLabel}>Template CV</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.templateRow}
+                        >
+                            {CV_TEMPLATES.map((tpl) => {
+                                const active = templateId === tpl.id;
+                                return (
+                                    <Pressable
+                                        key={tpl.id}
+                                        style={[
+                                            styles.templateCard,
+                                            active && {
+                                                borderColor: tpl.accent,
+                                                backgroundColor: tpl.accent + '18',
+                                            },
+                                        ]}
+                                        onPress={() => setTemplateId(tpl.id)}
+                                    >
+                                        {/* Top accent bar */}
+                                        <View
+                                            style={[
+                                                styles.templateAccentBar,
+                                                { backgroundColor: tpl.accent },
+                                            ]}
+                                        />
+                                        {/* Active indicator */}
+                                        {active && (
+                                            <View style={[styles.templateCheck, { backgroundColor: tpl.accent }]}>
+                                                <Ionicons name="checkmark" size={11} color="#fff" />
+                                            </View>
+                                        )}
+                                        <Text style={styles.templateEmoji}>{tpl.emoji}</Text>
+                                        <Text
+                                            style={[
+                                                styles.templateLabel,
+                                                active && { color: tpl.accent },
+                                            ]}
+                                        >
+                                            {tpl.label}
+                                        </Text>
+                                        <Text style={styles.templateDesc}>{tpl.desc}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
+                )}
 
                 {/* JD input */}
                 <View style={styles.jdSection}>
@@ -288,6 +378,54 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
     },
     docTypeDesc: { fontSize: 11, color: colors.textMuted, lineHeight: 16 },
+
+    // Template selector
+    templateSection: { gap: 6 },
+    templateRow: {
+        gap: spacing.sm,
+        paddingRight: spacing.sm,
+    },
+    templateCard: {
+        width: 148,
+        backgroundColor: colors.bgCard,
+        borderRadius: radius.lg,
+        padding: spacing.md,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        gap: spacing.xs,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    templateAccentBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
+        borderTopLeftRadius: radius.lg,
+        borderTopRightRadius: radius.lg,
+    },
+    templateCheck: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    templateEmoji: { fontSize: 26, marginTop: 6 },
+    templateLabel: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    templateDesc: {
+        fontSize: 11,
+        color: colors.textMuted,
+        lineHeight: 16,
+    },
 
     // JD input
     jdSection: { gap: 6 },

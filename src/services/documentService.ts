@@ -28,7 +28,8 @@ export async function getDocumentById(id: string): Promise<GeneratedDocument> {
 
 export async function createDocument(
     docType: DocumentType,
-    jdText: string
+    jdText: string,
+    templateId = 'modern'
 ): Promise<GeneratedDocument> {
     const {
         data: { user },
@@ -45,6 +46,7 @@ export async function createDocument(
             webhook_request_id: null,
             pdf_url: null,
             error_message: null,
+            template_id: templateId,
         })
         .select()
         .single();

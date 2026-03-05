@@ -4,6 +4,17 @@ const WEBHOOK_URL = process.env.EXPO_PUBLIC_N8N_WEBHOOK_URL;
 
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
+/** Info profilo minime incluse nel payload per n8n */
+export interface ProfileSnapshot {
+    fullName: string | null;
+    headline: string | null;
+    phone: string | null;
+    city: string | null;
+    linkedinUrl: string | null;
+    portfolioUrl: string | null;
+    avatarUrl: string | null;
+}
+
 export interface WebhookPayload {
     userId: string;
     docType: DocumentType;
@@ -12,6 +23,20 @@ export interface WebhookPayload {
     requestedAt: string;
     /** Supabase document record ID (so n8n can update it when done) */
     documentId: string;
+    /** v2 — Template CV scelto dall'utente */
+    templateId: string;
+    /**
+     * v2 — Full HTML string of the chosen CV template.
+     * n8n should substitute the {{placeholders}} before rendering to PDF.
+     * Placeholder list: {{full_name}}, {{headline}}, {{city}}, {{phone}},
+     * {{linkedin_url}}, {{portfolio_url}}, {{avatar_url}}, {{initials}},
+     * {{first_name}}, {{last_name}}, {{profile_summary}},
+     * {{experiences_html}}, {{education_html}}, {{certifications_html}},
+     * {{skills_list}}, {{skills_section_html}}, {{languages_html}}
+     */
+    templateHtml?: string;
+    /** v2 — Snapshot del profilo utente per la generazione */
+    profile: ProfileSnapshot | null;
 }
 
 export interface WebhookResponse {
@@ -31,7 +56,7 @@ export interface WebhookResponse {
  * n8n is expected to:
  * 1. Receive the payload
  * 2. Run RAG over the user's experiences (via pgvector)
- * 3. Generate CV / Cover Letter via LLM
+ * 3. Generate CV / Cover Letter via LLM using the chosen template
  * 4. Upload the PDF to Supabase Storage
  * 5. Return { pdf_url, request_id } in the HTTP response
  *    (or update the generated_documents row directly via Supabase API)

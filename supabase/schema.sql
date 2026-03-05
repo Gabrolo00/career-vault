@@ -13,6 +13,11 @@ create table public.profiles (
   full_name text,
   headline text,
   avatar_url text,
+  -- CV contact fields (aggiornati v2)
+  phone text,
+  city text,
+  linkedin_url text,
+  portfolio_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -48,6 +53,42 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ============================================================
+-- Storage — avatars bucket
+-- ============================================================
+-- Esegui questo blocco SOLO se il bucket non esiste già.
+-- Puoi crearlo anche dalla dashboard Storage di Supabase.
+insert into storage.buckets (id, name, public)
+values ('avatars', 'avatars', true)
+on conflict (id) do nothing;
+
+-- Policy: l'utente può leggere/scrivere solo la propria cartella (userId/*)
+create policy "Avatar: upload own"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (string_to_array(name, '/'))[1]
+  );
+
+create policy "Avatar: update own"
+  on storage.objects for update
+  using (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (string_to_array(name, '/'))[1]
+  );
+
+create policy "Avatar: delete own"
+  on storage.objects for delete
+  using (
+    bucket_id = 'avatars'
+    and auth.uid()::text = (string_to_array(name, '/'))[1]
+  );
+
+-- Il bucket è pubblico → chiunque può leggere (SELECT non serve policy restrittiva)
+create policy "Avatar: public read"
+  on storage.objects for select
+  using (bucket_id = 'avatars');
 
 -- ============================================================
 -- experiences
@@ -117,6 +158,8 @@ create table public.generated_documents (
   pdf_url text,
   status public.document_status default 'pending',
   error_message text,
+  -- Template scelto dall'utente (v2)
+  template_id text default 'modern',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

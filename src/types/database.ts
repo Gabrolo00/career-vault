@@ -25,6 +25,11 @@ export interface Profile {
     full_name: string | null;
     headline: string | null;
     avatar_url: string | null;
+    // v2 contact fields
+    phone: string | null;
+    city: string | null;
+    linkedin_url: string | null;
+    portfolio_url: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -58,6 +63,7 @@ export interface GeneratedDocument {
     pdf_url: string | null;
     status: DocumentStatus;
     error_message: string | null;
+    template_id: string | null; // v2 — template selezionato
     created_at: string;
     updated_at: string;
 }

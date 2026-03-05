@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>{{full_name}} — CV</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400&family=DM+Serif+Display:ital@0;1&display=swap"
+        rel="stylesheet"
+    >
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: #ffffff;
+            color: #1a1a1a;
+            font-size: 11px;
+            line-height: 1.65;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* ── SHELL ── */
+        .cv {
+            width: 794px;
+            min-height: 1123px;
+            padding: 56px 60px 56px 60px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* ── HEADER ── */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 24px;
+            border-bottom: 2px solid #1a1a1a;
+            margin-bottom: 28px;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .header-name {
+            font-family: 'DM Serif Display', Georgia, serif;
+            font-size: 40px;
+            font-weight: 400;
+            color: #1a1a1a;
+            letter-spacing: -1.5px;
+            line-height: 1.05;
+        }
+
+        .header-name em {
+            font-style: italic;
+            color: #555;
+        }
+
+        .header-role {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #666;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .header-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .contact-line {
+            font-size: 10px;
+            color: #555;
+            font-weight: 400;
+        }
+
+        .contact-line a {
+            color: #1a1a1a;
+            text-decoration: none;
+        }
+
+        /* ── BODY GRID ── */
+        .body-grid {
+            display: flex;
+            gap: 40px;
+            flex: 1;
+        }
+
+        /* ── LEFT COLUMN ── */
+        .col-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+        }
+
+        /* ── RIGHT COLUMN ── */
+        .col-side {
+            width: 165px;
+            display: flex;
+            flex-direction: column;
+            gap: 26px;
+        }
+
+        /* ── SECTION ── */
+        .section {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .section-title {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+
+        .section-divider {
+            width: 100%;
+            height: 1px;
+            background: #e5e5e5;
+            margin-bottom: 10px;
+        }
+
+        /* ── ENTRIES ── */
+        .entry {
+            margin-bottom: 16px;
+        }
+
+        .entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 2px;
+        }
+
+        .entry-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1a1a1a;
+            line-height: 1.3;
+        }
+
+        .entry-date {
+            font-size: 9.5px;
+            color: #888;
+            font-weight: 400;
+            white-space: nowrap;
+            margin-left: 12px;
+            flex-shrink: 0;
+        }
+
+        .entry-org {
+            font-size: 10.5px;
+            font-weight: 500;
+            color: #444;
+            font-style: italic;
+            margin-bottom: 5px;
+        }
+
+        .entry-desc {
+            font-size: 10px;
+            color: #555;
+            line-height: 1.7;
+        }
+
+        /* Profile summary */
+        .summary-text {
+            font-size: 11px;
+            color: #333;
+            line-height: 1.75;
+            font-weight: 300;
+        }
+
+        /* ── SIDE COLUMN ITEMS ── */
+        .side-item {
+            margin-bottom: 8px;
+        }
+
+        .side-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .side-item-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #1a1a1a;
+            line-height: 1.3;
+        }
+
+        .side-item-sub {
+            font-size: 9.5px;
+            color: #777;
+            line-height: 1.4;
+        }
+
+        /* Skills list */
+        .skill-line {
+            font-size: 10px;
+            color: #555;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .skill-line:last-child {
+            border-bottom: none;
+        }
+
+        /* Language bars */
+        .lang-item {
+            margin-bottom: 9px;
+        }
+
+        .lang-name-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .lang-name {
+            font-size: 10px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .lang-level {
+            font-size: 9px;
+            color: #888;
+        }
+
+        .lang-bar {
+            height: 2px;
+            background: #e5e5e5;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .lang-bar-fill {
+            height: 100%;
+            background: #1a1a1a;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cv">
+
+        <!-- ════ HEADER ════ -->
+        <header class="header">
+            <div class="header-left">
+                <div class="header-name">{{first_name}}<br><em>{{last_name}}</em></div>
+                <div class="header-role">{{headline}}</div>
+            </div>
+            <div class="header-right">
+                {{#if city}}<span class="contact-line">{{city}}</span>{{/if}}
+                {{#if phone}}<span class="contact-line">{{phone}}</span>{{/if}}
+                {{#if linkedin_url}}<span class="contact-line"><a href="{{linkedin_url}}">LinkedIn</a></span>{{/if}}
+                {{#if portfolio_url}}<span class="contact-line"><a
+                        href="{{portfolio_url}}">{{portfolio_url}}</a></span>{{/if}}
+            </div>
+        </header>
+
+        <!-- ════ BODY ════ -->
+        <div class="body-grid">
+
+            <!-- Main Column -->
+            <div class="col-main">
+
+                {{#if profile_summary}}
+                <section class="section">
+                    <div class="section-title">Profilo</div>
+                    <div class="section-divider"></div>
+                    <p class="summary-text">{{profile_summary}}</p>
+                </section>
+                {{/if}}
+
+                <!-- Work Experience -->
+                <section class="section">
+                    <div class="section-title">Esperienza</div>
+                    <div class="section-divider"></div>
+                    {{experiences_html}}
+                </section>
+
+                {{#if education_html}}
+                <section class="section">
+                    <div class="section-title">Formazione</div>
+                    <div class="section-divider"></div>
+                    {{education_html}}
+                </section>
+                {{/if}}
+
+            </div>
+
+            <!-- Side Column -->
+            <div class="col-side">
+
+                {{#if skills_section_html}}
+                <section class="section">
+                    <div class="section-title">Competenze</div>
+                    <div class="section-divider"></div>
+                    {{skills_section_html}}
+                </section>
+                {{/if}}
+
+                {{#if certifications_html}}
+                <section class="section">
+                    <div class="section-title">Certificazioni</div>
+                    <div class="section-divider"></div>
+                    {{certifications_html}}
+                </section>
+                {{/if}}
+
+                {{#if languages_html}}
+                <section class="section">
+                    <div class="section-title">Lingue</div>
+                    <div class="section-divider"></div>
+                    {{languages_html}}
+                </section>
+                {{/if}}
+
+            </div>
+
+        </div>
+
+    </div>
+</body>
+
+</html>
