@@ -27,6 +27,7 @@ export default function ProfileScreen() {
 
     const [fullName, setFullName] = useState('');
     const [headline, setHeadline] = useState('');
+    const [nativeLanguage, setNativeLanguage] = useState('');
     const [phone, setPhone] = useState('');
     const [city, setCity] = useState('');
     const [linkedin, setLinkedin] = useState('');
@@ -40,6 +41,7 @@ export default function ProfileScreen() {
         if (profile) {
             setFullName(profile.full_name ?? '');
             setHeadline(profile.headline ?? '');
+            setNativeLanguage(profile.native_language ?? '');
             setPhone(profile.phone ?? '');
             setCity(profile.city ?? '');
             setLinkedin(profile.linkedin_url ?? '');
@@ -57,6 +59,7 @@ export default function ProfileScreen() {
         const payload: ProfileUpdate = {
             full_name: fullName.trim() || null,
             headline: headline.trim() || null,
+            native_language: nativeLanguage.trim() || null,
             phone: phone.trim() || null,
             city: city.trim() || null,
             linkedin_url: linkedin.trim() || null,
@@ -178,6 +181,13 @@ export default function ProfileScreen() {
                     onChangeText={markDirty(setHeadline)}
                     placeholder="Senior Frontend Developer @ Acme"
                     icon="briefcase"
+                />
+                <Field
+                    label="Lingua madre"
+                    value={nativeLanguage}
+                    onChangeText={markDirty(setNativeLanguage)}
+                    placeholder="Italiano"
+                    icon="language"
                 />
 
                 {/* Section: Contatti */}

@@ -30,6 +30,7 @@ export interface Profile {
     city: string | null;
     linkedin_url: string | null;
     portfolio_url: string | null;
+    native_language: string | null;
     created_at: string;
     updated_at: string;
 }
