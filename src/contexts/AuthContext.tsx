@@ -27,6 +27,15 @@ interface AuthContextValue extends AuthState {
         password: string
     ) => Promise<{ error: string | null }>;
     signOut: () => Promise<void>;
+    resendConfirmation: (email: string) => Promise<{ error: string | null }>;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns true if the session belongs to a user that confirmed their email. */
+function isEmailConfirmed(s: Session | null): boolean {
+    if (!s) return false;
+    return !!s.user.email_confirmed_at;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -41,16 +50,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Restore session from SecureStore on mount
+        // Restore session on mount — reject unconfirmed email sessions
         supabase.auth.getSession().then(({ data }) => {
-            setSession(data.session);
-            setUser(data.session?.user ?? null);
+            const s = data.session;
+            if (s && !isEmailConfirmed(s)) {
+                supabase.auth.signOut();
+                setLoading(false);
+                return;
+            }
+            setSession(s);
+            setUser(s?.user ?? null);
             setLoading(false);
         });
 
-        // Listen for auth state changes (login, logout, token refresh)
+        // Listen for auth changes — same guard
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_event, newSession) => {
+                if (newSession && !isEmailConfirmed(newSession)) {
+                    supabase.auth.signOut();
+                    setLoading(false);
+                    return;
+                }
                 setSession(newSession);
                 setUser(newSession?.user ?? null);
                 setLoading(false);
@@ -62,13 +82,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signUp = useCallback(
         async (email: string, password: string, fullName: string) => {
-            const { error } = await supabase.auth.signUp({
+            // Check if profile exists first (Supabase often hides duplicate email errors for security)
+            const { data: existingUser } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (existingUser) {
+                return { error: 'User already registered' };
+            }
+
+            const { error, data } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: { full_name: fullName },
+                    emailRedirectTo: 'careervault://',
                 },
             });
+
+            // Check if user was returned but it's a fake signup (identities array is empty for duplicate users)
+            if (data?.user && data.user.identities && data.user.identities.length === 0) {
+                return { error: 'User already registered' };
+            }
             return { error: error?.message ?? null };
         },
         []
@@ -86,8 +123,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut();
     }, []);
 
+    const resendConfirmation = useCallback(async (email: string) => {
+        const { error } = await supabase.auth.resend({
+            type: 'signup',
+            email,
+            options: { emailRedirectTo: 'careervault://' },
+        });
+        return { error: error?.message ?? null };
+    }, []);
+
     return (
-        <AuthContext.Provider value={{ session, user, loading, signUp, signIn, signOut }}>
+        <AuthContext.Provider
+            value={{ session, user, loading, signUp, signIn, signOut, resendConfirmation }}
+        >
             {children}
         </AuthContext.Provider>
     );

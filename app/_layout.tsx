@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
+import { supabase } from '../src/services/supabase';
 
 // ─── Auth Guard ───────────────────────────────────────────────────────────────
 
@@ -8,9 +10,30 @@ function AuthGuard() {
     const { session, loading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+    const url = Linking.useURL();
+
+    // Handling ref prevents AuthGuard from redirecting to tabs mid-confirmation
+    const handlingDeepLink = useRef(false);
+
+    // Handle email confirmation deep link: careervault://?code=XXX&type=signup
+    useEffect(() => {
+        if (!url) return;
+        const parsed = Linking.parse(url);
+        const code = parsed.queryParams?.code as string | undefined;
+        if (!code) return;
+
+        handlingDeepLink.current = true;
+        supabase.auth.exchangeCodeForSession(code).finally(() => {
+            // Email confirmed — sign out so the user logs in manually
+            supabase.auth.signOut().finally(() => {
+                handlingDeepLink.current = false;
+                router.replace('/(auth)/login');
+            });
+        });
+    }, [url]);
 
     useEffect(() => {
-        if (loading) return;
+        if (loading || handlingDeepLink.current) return;
 
         const inAuthGroup = segments[0] === '(auth)';
 
@@ -21,9 +44,6 @@ function AuthGuard() {
         }
     }, [session, loading, segments]);
 
-    // Usa Stack (non Slot) e dichiara esplicitamente tutti i gruppi di route.
-    // Questo evita il bug "Cannot read property 'stale' of undefined" in TabRouter
-    // che si manifesta quando si torna indietro da stack annidati ai tab.
     return (
         <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
             <Stack.Screen name="(auth)" />

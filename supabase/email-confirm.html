@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conferma il tuo account — CareerVault</title>
+</head>
+<body style="margin:0;padding:0;background-color:#080D1A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#080D1A;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;background-color:#0F1929;border-radius:16px;border:1px solid #1E3A5F;overflow:hidden;">
+
+          <!-- ── HEADER ── -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#0F2240 0%,#0F1929 100%);padding:40px 40px 32px;text-align:center;border-bottom:1px solid #1E3A5F;">
+              <!-- Icon -->
+              <table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 20px;">
+                <tr>
+                  <td style="width:60px;height:60px;background:linear-gradient(135deg,#3B82F6,#2563EB);border-radius:14px;text-align:center;vertical-align:middle;font-size:28px;line-height:60px;">
+                    🔐
+                  </td>
+                </tr>
+              </table>
+              <!-- Brand -->
+              <p style="margin:0;font-size:26px;font-weight:800;color:#F8FAFC;letter-spacing:-0.5px;">CareerVault</p>
+              <p style="margin:8px 0 0;font-size:11px;font-weight:600;color:#3B82F6;letter-spacing:2.5px;text-transform:uppercase;">Conferma Account</p>
+            </td>
+          </tr>
+
+          <!-- ── BODY ── -->
+          <tr>
+            <td style="padding:36px 40px 28px;">
+              <p style="margin:0 0 6px;font-size:20px;font-weight:700;color:#F8FAFC;line-height:1.3;">Benvenuto! Quasi fatto 👋</p>
+              <p style="margin:0 0 28px;font-size:14px;color:#94A3B8;line-height:1.75;">
+                Grazie per aver creato il tuo account CareerVault.<br>
+                Clicca il pulsante qui sotto per confermare la tua email e attivare il profilo.
+              </p>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:32px;">
+                    <a href="{{ .ConfirmationURL }}"
+                       style="display:inline-block;background:linear-gradient(135deg,#3B82F6,#2563EB);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:15px 44px;border-radius:12px;letter-spacing:0.2px;box-shadow:0 4px 20px rgba(59,130,246,0.35);">
+                      Conferma email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Divider -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-top:1px solid #1E3A5F;padding-top:24px;">
+                    <p style="margin:0 0 6px;font-size:12px;color:#475569;">Il pulsante non funziona? Copia questo link nel browser:</p>
+                    <p style="margin:0;font-size:11px;color:#3B82F6;word-break:break-all;">{{ .ConfirmationURL }}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── FOOTER ── -->
+          <tr>
+            <td style="background-color:#080D1A;padding:20px 40px;border-top:1px solid #1E3A5F;text-align:center;">
+              <p style="margin:0 0 8px;font-size:12px;color:#475569;line-height:1.6;">
+                Hai ricevuto questa email perché è stato registrato un account con questo indirizzo.<br>
+                Se non sei stato tu, puoi ignorarla in sicurezza.
+              </p>
+              <p style="margin:0;font-size:11px;color:#334155;">
+                © 2025 CareerVault — Il tuo vault professionale
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
