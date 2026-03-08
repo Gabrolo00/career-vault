@@ -320,7 +320,7 @@ function ResultCard({
                 </View>
             </View>
 
-            {doc.status === 'completed' && doc.pdf_url ? (
+            {doc.status === 'completed' && doc.generated_content ? (
                 <Pressable style={styles.viewPdfBtn} onPress={onViewPdf}>
                     <Ionicons name="eye" size={16} color="#fff" />
                     <Text style={styles.viewPdfText}>Visualizza documento</Text>

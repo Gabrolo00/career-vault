@@ -6,6 +6,16 @@ export type Json =
     | { [key: string]: Json | undefined }
     | Json[];
 
+// ─── Language entry (stored as JSONB array in profiles.languages) ─────────────
+
+export interface LanguageEntry {
+    name: string;
+    /** e.g. "Madrelingua", "C1", "B2" */
+    level: string;
+    /** 0–100, used for progress bars in templates */
+    proficiency: number;
+}
+
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
 export type ExperienceType =
@@ -31,6 +41,8 @@ export interface Profile {
     linkedin_url: string | null;
     portfolio_url: string | null;
     native_language: string | null;
+    /** Array of languages with level and proficiency, stored as JSONB */
+    languages: LanguageEntry[] | null;
     created_at: string;
     updated_at: string;
 }
@@ -65,6 +77,8 @@ export interface GeneratedDocument {
     status: DocumentStatus;
     error_message: string | null;
     template_id: string | null; // v2 — template selezionato
+    /** JSON result from n8n — used by the app to render the PDF locally */
+    generated_content: Json | null;
     created_at: string;
     updated_at: string;
 }

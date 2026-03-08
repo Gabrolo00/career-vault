@@ -32,7 +32,6 @@ export default function ProfileScreen() {
     const [city, setCity] = useState('');
     const [linkedin, setLinkedin] = useState('');
     const [portfolio, setPortfolio] = useState('');
-
     const [dirty, setDirty] = useState(false);
     const [avatarLoading, setAvatarLoading] = useState(false);
 
@@ -149,7 +148,6 @@ export default function ProfileScreen() {
                                 <Ionicons name="person" size={44} color={colors.textMuted} />
                             </View>
                         )}
-                        {/* Camera badge */}
                         <View style={styles.cameraBadge}>
                             <Ionicons name="camera" size={14} color="#fff" />
                         </View>

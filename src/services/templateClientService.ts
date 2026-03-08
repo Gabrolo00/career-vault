@@ -256,11 +256,22 @@ const MODERN_HTML = `<!DOCTYPE html>
     background: linear-gradient(135deg, #eff6ff, #f0f9ff);
     border-left: 3px solid #2563eb;
     border-radius: 0 8px 8px 0;
-    padding: 12px 16px;
-    font-size: 10.5px;
+    padding: 16px 20px;
+    font-size: 11px;
     color: #334155;
-    line-height: 1.7;
+    line-height: 1.8;
   }
+  .summary-box p { margin-bottom: 10px; }
+  .summary-box p:last-child { margin-bottom: 0; }
+
+  /* Language bars (sidebar) */
+  .lang-item { margin-bottom: 10px; }
+  .lang-item:last-child { margin-bottom: 0; }
+  .lang-name-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .lang-name { font-size: 10px; font-weight: 600; color: #e2e8f0; }
+  .lang-level { font-size: 9px; color: #64748b; }
+  .lang-bar { height: 2px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
+  .lang-bar-fill { height: 100%; background: #2563eb; border-radius: 2px; }
 </style>
 </head>
 <body>
@@ -323,6 +334,14 @@ const MODERN_HTML = `<!DOCTYPE html>
     </div>
     {{/if}}
 
+    <!-- Languages -->
+    {{#if languages_html}}
+    <div class="sb-section">
+      <div class="sb-heading">Competenze Linguistiche</div>
+      {{languages_html}}
+    </div>
+    {{/if}}
+
   </aside>
 
   <!-- ════ MAIN ════ -->
@@ -336,7 +355,7 @@ const MODERN_HTML = `<!DOCTYPE html>
         <h2>Profilo</h2>
         <div class="line"></div>
       </div>
-      <div class="summary-box">{{profile_summary}}</div>
+      <div class="summary-box">{{profile_summary_html}}</div>
     </section>
     {{/if}}
 
@@ -582,9 +601,11 @@ const MINIMAL_HTML = `<!DOCTYPE html>
         .summary-text {
             font-size: 11px;
             color: #333;
-            line-height: 1.75;
+            line-height: 1.8;
             font-weight: 300;
         }
+        .summary-text p { margin-bottom: 12px; }
+        .summary-text p:last-child { margin-bottom: 0; }
 
         /* ── SIDE COLUMN ITEMS ── */
         .side-item {
@@ -685,7 +706,7 @@ const MINIMAL_HTML = `<!DOCTYPE html>
                 <section class="section">
                     <div class="section-title">Profilo</div>
                     <div class="section-divider"></div>
-                    <p class="summary-text">{{profile_summary}}</p>
+                    <div class="summary-text">{{profile_summary_html}}</div>
                 </section>
                 {{/if}}
 
@@ -1060,11 +1081,22 @@ const CREATIVE_HTML = `<!DOCTYPE html>
             background: linear-gradient(135deg, rgba(108, 61, 232, 0.06), rgba(247, 97, 95, 0.04));
             border: 1px solid rgba(108, 61, 232, 0.12);
             border-radius: 10px;
-            padding: 14px 16px;
-            font-size: 10.5px;
+            padding: 16px 18px;
+            font-size: 11px;
             color: #334155;
-            line-height: 1.75;
+            line-height: 1.8;
         }
+        .profile-card p { margin-bottom: 10px; }
+        .profile-card p:last-child { margin-bottom: 0; }
+
+        /* Language bars (sidebar) */
+        .lang-item { margin-bottom: 10px; }
+        .lang-item:last-child { margin-bottom: 0; }
+        .lang-name-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .lang-name { font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,0.85); }
+        .lang-level { font-size: 8.5px; color: var(--sidebar-heading); }
+        .lang-bar { height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+        .lang-bar-fill { height: 100%; background: var(--sidebar-accent); border-radius: 2px; }
     </style>
 </head>
 
@@ -1168,6 +1200,16 @@ const CREATIVE_HTML = `<!DOCTYPE html>
                 </div>
                 {{/if}}
 
+                {{#if languages_html}}
+                <div class="sb-divider"></div>
+
+                <!-- Languages -->
+                <div class="sb-section">
+                    <div class="sb-heading">Competenze Linguistiche</div>
+                    {{languages_html}}
+                </div>
+                {{/if}}
+
             </div>
         </aside>
 
@@ -1186,7 +1228,7 @@ const CREATIVE_HTML = `<!DOCTYPE html>
                     </div>
                     <h2>Profilo</h2>
                 </div>
-                <div class="profile-card">{{profile_summary}}</div>
+                <div class="profile-card">{{profile_summary_html}}</div>
             </section>
             {{/if}}
 

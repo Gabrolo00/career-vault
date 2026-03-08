@@ -7,9 +7,7 @@ import {
     deleteDocument,
 } from '../services/documentService';
 import { triggerGeneration } from '../services/webhookService';
-import { getProfile } from '../services/profileService';
 import { supabase } from '../services/supabase';
-import { getTemplateHtml } from '../services/templateClientService';
 
 interface UseDocumentsReturn {
     documents: GeneratedDocument[];
@@ -43,12 +41,14 @@ export function useDocuments(): UseDocumentsReturn {
     }, [refresh]);
 
     /**
-     * Full generation flow:
-     * 1. Insert a `pending` record in Supabase (gives us a documentId)
-     * 2. Fetch profile snapshot (fire-and-forget on failure)
-     * 3. Call n8n webhook with userId + jdText + documentId + templateId + profile
-     * 4a. If n8n responds synchronously with pdf_url → update record to `completed`
-     * 4b. If n8n is fire-and-forget → leave record as `processing`
+     * Generation flow (JSON-first architecture):
+     * 1. Insert a `pending` record in Supabase
+     * 2. Call n8n with a minimal payload — NO HTML, NO profile snapshot
+     *    n8n queries Supabase directly for profile + experiences
+     * 3a. If n8n responds synchronously with N8nGenerationResult JSON:
+     *     → Store JSON in generated_content, mark as `completed`
+     * 3b. If n8n is fire-and-forget (null response):
+     *     → Leave as `processing`; n8n will update the record via Supabase API
      */
     const generate = useCallback(
         async (
@@ -59,66 +59,32 @@ export function useDocuments(): UseDocumentsReturn {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Utente non autenticato');
 
-            // 1. Create pending record (persists templateId)
+            // 1. Create pending record
             let doc = await createDocument(docType, jdText, templateId);
             setDocuments((prev) => [doc, ...prev]);
 
-            // 2. Fetch profile snapshot (best-effort)
-            let profileSnapshot = null;
             try {
-                const profile = await getProfile();
-                if (profile) {
-                    profileSnapshot = {
-                        fullName: profile.full_name,
-                        headline: profile.headline,
-                        phone: profile.phone,
-                        city: profile.city,
-                        linkedinUrl: profile.linkedin_url,
-                        portfolioUrl: profile.portfolio_url,
-                        avatarUrl: profile.avatar_url,
-                    };
-                }
-            } catch {
-                // Non-blocking: profile fetch failure shouldn't stop generation
-            }
-
-            try {
-                // 3. Resolve template HTML (client-side inline strings)
-                let templateHtml: string | undefined;
-                try {
-                    templateHtml = getTemplateHtml(templateId as any);
-                } catch {
-                    // Non-blocking: if template lookup fails, n8n falls back to templateId
-                }
-
-                // 4. Fire webhook
-                const webhookRes = await triggerGeneration({
+                // 2. Fire webhook — minimal payload, no HTML
+                const generationResult = await triggerGeneration({
                     userId: user.id,
+                    documentId: doc.id,
                     docType,
                     jobDescription: jdText,
-                    requestedAt: new Date().toISOString(),
-                    documentId: doc.id,
                     templateId,
-                    templateHtml,
-                    profile: profileSnapshot,
+                    requestedAt: new Date().toISOString(),
                 });
 
-                // 4a. Synchronous response → update record
-                if (webhookRes.pdf_url) {
+                if (generationResult) {
+                    // 3a. Synchronous response → store JSON and mark completed
                     doc = await updateDocument(doc.id, {
                         status: 'completed',
-                        pdf_url: webhookRes.pdf_url,
-                        webhook_request_id: webhookRes.request_id ?? null,
+                        generated_content: generationResult as any,
                     });
                 } else {
-                    // 4b. Fire-and-forget → mark as processing
-                    doc = await updateDocument(doc.id, {
-                        status: 'processing',
-                        webhook_request_id: webhookRes.request_id ?? null,
-                    });
+                    // 3b. Fire-and-forget → n8n will update the record directly
+                    doc = await updateDocument(doc.id, { status: 'processing' });
                 }
             } catch (webhookErr) {
-                // Webhook failed → mark record as failed
                 doc = await updateDocument(doc.id, {
                     status: 'failed',
                     error_message: (webhookErr as Error).message,

@@ -18,6 +18,9 @@ create table public.profiles (
   city text,
   linkedin_url text,
   portfolio_url text,
+  -- v3 fields
+  native_language text,
+  languages jsonb default '[]',
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -160,6 +163,8 @@ create table public.generated_documents (
   error_message text,
   -- Template scelto dall'utente (v2)
   template_id text default 'modern',
+  -- v3: JSON result from n8n, used by app to render PDF locally
+  generated_content jsonb,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

@@ -14,7 +14,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getDocumentById } from '../../src/services/documentService';
+import { renderCvHtml } from '../../src/services/templateRenderer';
 import { GeneratedDocument } from '../../src/types/database';
+import { N8nGenerationResult } from '../../src/types/generation';
+import { TemplateId } from '../(tabs)/generate';
 import { colors, radius, spacing, typography, STATUS_ICONS, DOC_TYPE_ICONS } from '../../src/theme';
 
 export default function DocumentViewerScreen() {
@@ -34,10 +37,13 @@ export default function DocumentViewerScreen() {
             try {
                 const data = await getDocumentById(id);
                 setDoc(data);
-                if (data?.pdf_url) {
-                    const res = await fetch(data.pdf_url);
-                    const text = await res.text();
-                    setHtmlContent(text);
+
+                if (data?.status === 'completed' && data.generated_content) {
+                    // Render HTML locally from stored JSON + template
+                    const generationResult = data.generated_content as unknown as N8nGenerationResult;
+                    const templateId = (data.template_id ?? 'modern') as TemplateId;
+                    const html = renderCvHtml(generationResult, templateId);
+                    setHtmlContent(html);
                 }
             } catch (e) {
                 setError((e as Error).message);
@@ -57,7 +63,7 @@ export default function DocumentViewerScreen() {
         try {
             setPreviewing(true);
             await Print.printAsync({ html: htmlContent });
-        } catch (e) {
+        } catch {
             console.log('Preview closed');
         } finally {
             setPreviewing(false);
@@ -113,7 +119,7 @@ export default function DocumentViewerScreen() {
         );
     }
 
-    if (doc.status !== 'completed' || !doc.pdf_url) {
+    if (doc.status !== 'completed' || !doc.generated_content) {
         const statusMeta = STATUS_ICONS[doc.status];
         return (
             <View style={styles.center}>
@@ -170,7 +176,7 @@ export default function DocumentViewerScreen() {
             {!htmlContent && (
                 <View style={styles.htmlLoadingRow}>
                     <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={styles.htmlLoadingText}>Preparazione PDF in corso…</Text>
+                    <Text style={styles.htmlLoadingText}>Preparazione documento in corso…</Text>
                 </View>
             )}
 
@@ -201,8 +207,8 @@ export default function DocumentViewerScreen() {
                         ? <ActivityIndicator color={colors.primary} size="small" />
                         : (
                             <View style={styles.btnInner}>
-                                <Ionicons name="download-outline" size={18} color={colors.primary} />
-                                <Text style={styles.btnSecondaryText}>Scarica PDF</Text>
+                                <Ionicons name="share-outline" size={18} color={colors.primary} />
+                                <Text style={styles.btnSecondaryText}>Condividi / Salva PDF</Text>
                             </View>
                         )
                     }
@@ -211,7 +217,7 @@ export default function DocumentViewerScreen() {
 
             <Text style={styles.hint}>
                 {'Visualizza'} mostra un'anteprima nativa del documento.{'\n'}
-                {'Scarica PDF'} genera e condivide un PDF.
+                {'Condividi / Salva PDF'} genera il PDF e apre il menu di condivisione del sistema (WhatsApp, Gmail, Salva su File…).
             </Text>
         </ScrollView>
     );
