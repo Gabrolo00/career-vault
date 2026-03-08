@@ -153,18 +153,43 @@ function buildSkillsSection(skills: string[], templateId: TemplateId): string {
     return buildSkillsInline(skills, templateId);
 }
 
-/** Language bars — used in side column of minimal template */
+/** Language cards — one row per language with parlato/scritto bars + level badge */
 function buildLanguagesHtml(languages: N8nLanguageItem[]): string {
     if (!languages.length) return '';
-    return languages.map((lang) => `<div class="lang-item">
-  <div class="lang-name-row">
-    <span class="lang-name">${esc(lang.name)}</span>
-    <span class="lang-level">${esc(lang.level)}</span>
+    return languages.map((lang) => {
+        const isMadrelingua = lang.proficiency >= 100 || lang.level === 'Madrelingua';
+        const pct = lang.proficiency;
+
+        if (isMadrelingua) {
+            return `<div class="lang-card">
+  <div class="lang-card-name">${esc(lang.name)}</div>
+  <div class="lang-table">
+    <div class="lang-col" style="flex:1">
+      <div class="lang-col-head">Livello</div>
+      <span class="lang-native-badge">Madrelingua</span>
+    </div>
   </div>
-  <div class="lang-bar">
-    <div class="lang-bar-fill" style="width: ${lang.proficiency}%"></div>
+</div>`;
+        }
+
+        return `<div class="lang-card">
+  <div class="lang-card-name">${esc(lang.name)}</div>
+  <div class="lang-table">
+    <div class="lang-col">
+      <div class="lang-col-head">Parlato</div>
+      <div class="lang-bar"><div class="lang-bar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="lang-col">
+      <div class="lang-col-head">Scritto</div>
+      <div class="lang-bar"><div class="lang-bar-fill" style="width:${pct}%"></div></div>
+    </div>
+    <div class="lang-col lang-col-lvl">
+      <div class="lang-col-head">Livello</div>
+      <span class="lang-lvl-badge">${esc(lang.level)}</span>
+    </div>
   </div>
-</div>`).join('\n');
+</div>`;
+    }).join('\n');
 }
 
 /** Converts plain-text summary (with \n\n paragraph breaks) to HTML paragraphs */

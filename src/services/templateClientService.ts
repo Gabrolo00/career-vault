@@ -264,14 +264,18 @@ const MODERN_HTML = `<!DOCTYPE html>
   .summary-box p { margin-bottom: 10px; }
   .summary-box p:last-child { margin-bottom: 0; }
 
-  /* Language bars (sidebar) */
-  .lang-item { margin-bottom: 10px; }
-  .lang-item:last-child { margin-bottom: 0; }
-  .lang-name-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-  .lang-name { font-size: 10px; font-weight: 600; color: #e2e8f0; }
-  .lang-level { font-size: 9px; color: #64748b; }
-  .lang-bar { height: 2px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
+  /* Language cards (main body) */
+  .lang-grid { display: flex; flex-direction: column; gap: 8px; }
+  .lang-card { }
+  .lang-card-name { font-size: 10.5px; font-weight: 700; color: #1e293b; margin-bottom: 5px; }
+  .lang-table { display: flex; border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden; }
+  .lang-col { flex: 1; padding: 6px 9px; border-right: 1px solid #e2e8f0; }
+  .lang-col-lvl { flex: 0 0 54px; text-align: center; border-right: none; }
+  .lang-col-head { font-size: 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+  .lang-bar { height: 3px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
   .lang-bar-fill { height: 100%; background: #2563eb; border-radius: 2px; }
+  .lang-lvl-badge { font-size: 14px; font-weight: 800; color: #2563eb; display: inline-block; padding-top: 2px; }
+  .lang-native-badge { font-size: 9.5px; font-weight: 700; color: #2563eb; display: inline-block; padding-top: 2px; }
 </style>
 </head>
 <body>
@@ -334,13 +338,6 @@ const MODERN_HTML = `<!DOCTYPE html>
     </div>
     {{/if}}
 
-    <!-- Languages -->
-    {{#if languages_html}}
-    <div class="sb-section">
-      <div class="sb-heading">Competenze Linguistiche</div>
-      {{languages_html}}
-    </div>
-    {{/if}}
 
   </aside>
 
@@ -396,6 +393,18 @@ const MODERN_HTML = `<!DOCTYPE html>
       <div class="timeline">
         {{certifications_html}}
       </div>
+    </section>
+    {{/if}}
+
+    <!-- Languages -->
+    {{#if languages_html}}
+    <section>
+      <div class="section-header">
+        <div class="dot"></div>
+        <h2>Lingue</h2>
+        <div class="line"></div>
+      </div>
+      <div class="lang-grid">{{languages_html}}</div>
     </section>
     {{/if}}
 
@@ -663,18 +672,18 @@ const MINIMAL_HTML = `<!DOCTYPE html>
             color: #888;
         }
 
-        .lang-bar {
-            height: 2px;
-            background: #e5e5e5;
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .lang-bar-fill {
-            height: 100%;
-            background: #1a1a1a;
-            border-radius: 2px;
-        }
+        /* Language cards */
+        .lang-grid { display: flex; flex-direction: column; gap: 8px; }
+        .lang-card { }
+        .lang-card-name { font-size: 10.5px; font-weight: 700; color: #1a1a1a; margin-bottom: 5px; }
+        .lang-table { display: flex; border: 1px solid #e5e5e5; border-radius: 4px; overflow: hidden; }
+        .lang-col { flex: 1; padding: 6px 9px; border-right: 1px solid #e5e5e5; }
+        .lang-col-lvl { flex: 0 0 54px; text-align: center; border-right: none; }
+        .lang-col-head { font-size: 8px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+        .lang-bar { height: 3px; background: #e5e5e5; border-radius: 2px; overflow: hidden; }
+        .lang-bar-fill { height: 100%; background: #1a1a1a; border-radius: 2px; }
+        .lang-lvl-badge { font-size: 14px; font-weight: 800; color: #1a1a1a; display: inline-block; padding-top: 2px; }
+        .lang-native-badge { font-size: 9.5px; font-weight: 700; color: #1a1a1a; display: inline-block; padding-top: 2px; }
     </style>
 </head>
 
@@ -725,6 +734,14 @@ const MINIMAL_HTML = `<!DOCTYPE html>
                 </section>
                 {{/if}}
 
+                {{#if languages_html}}
+                <section class="section">
+                    <div class="section-title">Lingue</div>
+                    <div class="section-divider"></div>
+                    <div class="lang-grid">{{languages_html}}</div>
+                </section>
+                {{/if}}
+
             </div>
 
             <!-- Side Column -->
@@ -746,13 +763,6 @@ const MINIMAL_HTML = `<!DOCTYPE html>
                 </section>
                 {{/if}}
 
-                {{#if languages_html}}
-                <section class="section">
-                    <div class="section-title">Lingue</div>
-                    <div class="section-divider"></div>
-                    {{languages_html}}
-                </section>
-                {{/if}}
 
             </div>
 
@@ -1089,14 +1099,18 @@ const CREATIVE_HTML = `<!DOCTYPE html>
         .profile-card p { margin-bottom: 10px; }
         .profile-card p:last-child { margin-bottom: 0; }
 
-        /* Language bars (sidebar) */
-        .lang-item { margin-bottom: 10px; }
-        .lang-item:last-child { margin-bottom: 0; }
-        .lang-name-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .lang-name { font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,0.85); }
-        .lang-level { font-size: 8.5px; color: var(--sidebar-heading); }
-        .lang-bar { height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-        .lang-bar-fill { height: 100%; background: var(--sidebar-accent); border-radius: 2px; }
+        /* Language cards (main body) */
+        .lang-grid { display: flex; flex-direction: column; gap: 8px; }
+        .lang-card { }
+        .lang-card-name { font-size: 10.5px; font-weight: 700; color: #1e1b2e; margin-bottom: 5px; }
+        .lang-table { display: flex; border: 1px solid #ede9fe; border-radius: 6px; overflow: hidden; }
+        .lang-col { flex: 1; padding: 6px 9px; border-right: 1px solid #ede9fe; }
+        .lang-col-lvl { flex: 0 0 54px; text-align: center; border-right: none; }
+        .lang-col-head { font-size: 8px; font-weight: 600; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+        .lang-bar { height: 3px; background: #ede9fe; border-radius: 2px; overflow: hidden; }
+        .lang-bar-fill { height: 100%; background: var(--accent-1); border-radius: 2px; }
+        .lang-lvl-badge { font-size: 14px; font-weight: 800; color: var(--accent-1); display: inline-block; padding-top: 2px; }
+        .lang-native-badge { font-size: 9.5px; font-weight: 700; color: var(--accent-1); display: inline-block; padding-top: 2px; }
     </style>
 </head>
 
@@ -1200,15 +1214,6 @@ const CREATIVE_HTML = `<!DOCTYPE html>
                 </div>
                 {{/if}}
 
-                {{#if languages_html}}
-                <div class="sb-divider"></div>
-
-                <!-- Languages -->
-                <div class="sb-section">
-                    <div class="sb-heading">Competenze Linguistiche</div>
-                    {{languages_html}}
-                </div>
-                {{/if}}
 
             </div>
         </aside>
@@ -1274,6 +1279,20 @@ const CREATIVE_HTML = `<!DOCTYPE html>
                     <h2>Certificazioni</h2>
                 </div>
                 {{certifications_html}}
+            </section>
+            {{/if}}
+
+            {{#if languages_html}}
+            <section>
+                <div class="section-title">
+                    <div class="section-title-badge">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                        </svg>
+                    </div>
+                    <h2>Lingue</h2>
+                </div>
+                <div class="lang-grid">{{languages_html}}</div>
             </section>
             {{/if}}
 
