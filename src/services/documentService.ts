@@ -29,6 +29,7 @@ export async function getDocumentById(id: string): Promise<GeneratedDocument> {
 export async function createDocument(
     docType: DocumentType,
     jdText: string,
+    title: string,
     templateId = 'modern'
 ): Promise<GeneratedDocument> {
     const {
@@ -42,6 +43,7 @@ export async function createDocument(
             user_id: user.id,
             doc_type: docType,
             jd_text: jdText,
+            title: title,
             status: 'pending',
             webhook_request_id: null,
             pdf_url: null,

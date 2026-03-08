@@ -132,8 +132,8 @@ function DocumentRow({
 
             {/* Center: info */}
             <View style={styles.rowInfo}>
-                <Text style={styles.rowType}>
-                    {doc.doc_type === 'cv' ? 'Curriculum Vitae' : 'Cover Letter'}
+                <Text style={styles.rowType} numberOfLines={1}>
+                    {doc.title ?? (doc.doc_type === 'cv' ? 'Curriculum Vitae' : 'Cover Letter')}
                 </Text>
                 <Text style={styles.rowJd} numberOfLines={1}>
                     {doc.jd_snippet ?? doc.jd_text.slice(0, 60)}

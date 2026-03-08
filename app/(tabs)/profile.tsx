@@ -14,10 +14,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useProfile } from '../../src/hooks/useProfile';
 import { colors, radius, spacing, typography, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 import { ProfileUpdate } from '../../src/types/database';
+import { importCVFromPDF } from '../../src/services/importService';
+import { ImportSummary } from '../../src/types/import';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +37,10 @@ export default function ProfileScreen() {
     const [portfolio, setPortfolio] = useState('');
     const [dirty, setDirty] = useState(false);
     const [avatarLoading, setAvatarLoading] = useState(false);
+
+    const [importState, setImportState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+    const [importError, setImportError] = useState<string | null>(null);
 
     // Populate fields when profile loads
     useEffect(() => {
@@ -102,6 +109,28 @@ export default function ProfileScreen() {
         }
     };
 
+    const handleMagicImport = async () => {
+        if (!user) return;
+        const result = await DocumentPicker.getDocumentAsync({
+            type: 'application/pdf',
+            copyToCacheDirectory: true,
+        });
+        if (result.canceled) return;
+
+        const asset = result.assets[0];
+        setImportState('loading');
+        setImportError(null);
+        try {
+            const summary = await importCVFromPDF(asset.uri, asset.name ?? 'cv.pdf', user.id);
+            setImportSummary(summary);
+            setImportState('success');
+            await refresh();
+        } catch (e) {
+            setImportError((e as Error).message);
+            setImportState('error');
+        }
+    };
+
     const handleSignOut = () => {
         Alert.alert('Logout', 'Sei sicuro di voler uscire?', [
             { text: 'Annulla', style: 'cancel' },
@@ -154,6 +183,15 @@ export default function ProfileScreen() {
                     </Pressable>
                     <Text style={styles.avatarHint}>Tocca per cambiare foto</Text>
                 </View>
+
+                {/* Magic Import card */}
+                <MagicImportCard
+                    state={importState}
+                    summary={importSummary}
+                    error={importError}
+                    onImport={handleMagicImport}
+                    onDismiss={() => setImportState('idle')}
+                />
 
                 {/* Error banner */}
                 {error && (
@@ -254,6 +292,148 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
     );
 }
+
+// ─── Magic Import Card ────────────────────────────────────────────────────────
+
+function MagicImportCard({
+    state,
+    summary,
+    error,
+    onImport,
+    onDismiss,
+}: {
+    state: 'idle' | 'loading' | 'success' | 'error';
+    summary: ImportSummary | null;
+    error: string | null;
+    onImport: () => void;
+    onDismiss: () => void;
+}) {
+    if (state === 'success' && summary) {
+        const expCount = summary.experiencesImported;
+        const langCount = summary.languagesImported;
+        return (
+            <View style={magicStyles.card}>
+                <View style={magicStyles.successIconWrap}>
+                    <Ionicons name="checkmark-circle" size={26} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={magicStyles.successTitle}>Importazione completata!</Text>
+                    <Text style={magicStyles.successBody}>
+                        {expCount} esperien{expCount === 1 ? 'za' : 'ze'}, {langCount} lingu{langCount === 1 ? 'a' : 'e'} importat{expCount === 1 ? 'a' : 'e'}
+                    </Text>
+                </View>
+                <Pressable onPress={onDismiss} hitSlop={8}>
+                    <Ionicons name="close" size={18} color={colors.textMuted} />
+                </Pressable>
+            </View>
+        );
+    }
+
+    if (state === 'error') {
+        return (
+            <View style={[magicStyles.card, magicStyles.cardError]}>
+                <Ionicons name="warning-outline" size={20} color={colors.error} />
+                <View style={{ flex: 1 }}>
+                    <Text style={magicStyles.errorTitle}>Importazione fallita</Text>
+                    <Text style={magicStyles.errorBody} numberOfLines={2}>{error}</Text>
+                </View>
+                <Pressable onPress={onDismiss} hitSlop={8}>
+                    <Ionicons name="close" size={18} color={colors.textMuted} />
+                </Pressable>
+            </View>
+        );
+    }
+
+    return (
+        <Pressable
+            style={magicStyles.card}
+            onPress={state === 'idle' ? onImport : undefined}
+            disabled={state === 'loading'}
+        >
+            <View style={magicStyles.iconWrap}>
+                {state === 'loading' ? (
+                    <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                    <Ionicons name="color-wand-outline" size={20} color={colors.primary} />
+                )}
+            </View>
+            <View style={{ flex: 1 }}>
+                <Text style={magicStyles.importTitle}>
+                    {state === 'loading' ? 'Analisi in corso...' : 'Importa CV Magico'}
+                </Text>
+                <Text style={magicStyles.importSubtitle}>
+                    {state === 'loading'
+                        ? "L'AI sta leggendo il tuo CV"
+                        : 'Carica un PDF e popola il Vault con l\'AI'}
+                </Text>
+            </View>
+            {state === 'idle' && (
+                <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+            )}
+        </Pressable>
+    );
+}
+
+const magicStyles = StyleSheet.create({
+    card: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: colors.bgCard,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: colors.primary + '44',
+        padding: spacing.md,
+    },
+    cardError: {
+        borderColor: colors.error + '44',
+        backgroundColor: colors.errorBg,
+    },
+    iconWrap: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: colors.primary + '18',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    importTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.textPrimary,
+    },
+    importSubtitle: {
+        fontSize: 12,
+        color: colors.textMuted,
+        marginTop: 2,
+    },
+    successIconWrap: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    successTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#10B981',
+    },
+    successBody: {
+        fontSize: 12,
+        color: colors.textMuted,
+        marginTop: 2,
+    },
+    errorTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.error,
+    },
+    errorBody: {
+        fontSize: 12,
+        color: colors.error + 'CC',
+        marginTop: 2,
+    },
+});
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 

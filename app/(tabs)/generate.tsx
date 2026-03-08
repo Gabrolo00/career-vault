@@ -74,20 +74,21 @@ export default function GenerateScreen() {
     const { generate } = useDocuments();
 
     const [docType, setDocType] = useState<DocumentType>('cv');
+    const [docTitle, setDocTitle] = useState('');
     const [templateId, setTemplateId] = useState<TemplateId>('modern');
     const [jdText, setJdText] = useState('');
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<GeneratedDocument | null>(null);
     const [genError, setGenError] = useState<string | null>(null);
 
-    const canGenerate = jdText.trim().length > 30 && !generating;
+    const canGenerate = jdText.trim().length > 30 && docTitle.trim().length > 0 && !generating;
 
     const handleGenerate = async () => {
         try {
             setGenerating(true);
             setGenError(null);
             setResult(null);
-            const doc = await generate(docType, jdText.trim(), templateId);
+            const doc = await generate(docType, jdText.trim(), docTitle.trim(), templateId);
             setResult(doc);
         } catch (e) {
             setGenError((e as Error).message);
@@ -111,6 +112,18 @@ export default function GenerateScreen() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
+                {/* Title input */}
+                <View style={styles.jdSection}>
+                    <Text style={styles.sectionLabel}>Nome del documento</Text>
+                    <TextInput
+                        style={styles.jdInputShort}
+                        placeholder="Es. CV per Meta, Lettera Google…"
+                        placeholderTextColor={colors.textPlaceholder}
+                        value={docTitle}
+                        onChangeText={setDocTitle}
+                    />
+                </View>
+
                 {/* Doc type selector */}
                 <Text style={styles.sectionLabel}>Tipo di documento</Text>
                 <View style={styles.docTypeRow}>
@@ -441,6 +454,16 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
         minHeight: 180,
         lineHeight: 22,
+    },
+    jdInputShort: {
+        backgroundColor: colors.bgInput,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radius.md,
+        padding: spacing.md,
+        fontSize: 14,
+        color: colors.textPrimary,
+        height: 50,
     },
     jdInputWarn: { borderColor: colors.warning },
     warnText: { fontSize: 11, color: colors.warning },

@@ -1,0 +1,124 @@
+{
+    "name": "CareerVault - importPDF v1",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "import-pdf",
+                "responseMode": "responseNode",
+                "options": {}
+            },
+            "id": "n1-webhook",
+            "name": "📥 Webhook Import",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [200, 0],
+            "webhookId": "c3a1f2e0-8b4d-4a9f-b7c2-1e5d6f8a9b0c"
+        },
+        {
+            "parameters": {
+                "jsCode": "// ── Secrets e userId ──────────────────────────────────────────────────────\nconst supabaseUrl = 'YOUR_SUPABASE_URL';\nconst supabaseKey = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';\nconst openaiKey   = 'YOUR_OPENAI_API_KEY';\n\nconst body = $input.first().json.body || $input.first().json;\nconst userId = body.userId || body.user_id || null;\nif (!userId) throw new Error('userId mancante nel payload');\n\nreturn [{ json: { supabaseUrl, supabaseKey, openaiKey, userId }, binary: $input.first().binary }];"
+            },
+            "id": "n2-config",
+            "name": "⚙️ Config",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [420, 0]
+        },
+        {
+            "parameters": {
+                "operation": "pdf",
+                "binaryPropertyName": "file"
+            },
+            "id": "n3-extract",
+            "name": "📄 Extract PDF Text",
+            "type": "n8n-nodes-base.extractFromFile",
+            "typeVersion": 1,
+            "position": [640, 0]
+        },
+        {
+            "parameters": {
+                "jsCode": "const pdfText = $input.first().json.text || '';\nif (!pdfText.trim()) throw new Error('Nessun testo estratto dal PDF. Assicurati che il PDF non sia solo immagini (scansionato).');\nconst openaiKey = $('⚙️ Config').first().json.openaiKey;\nconst schemaExample = JSON.stringify({ profile: { full_name: 'string|null', headline: 'string|null', phone: 'string|null', city: 'string|null', linkedin_url: 'string|null', portfolio_url: 'string|null', native_language: 'string|null' }, experiences: [{ type: 'work|education|certification|volunteer|project', title: 'string', organization: 'string|null', location: 'string|null', start_date: 'YYYY-MM-DD|null', end_date: 'YYYY-MM-DD|null', is_current: 'boolean', description: 'string|null', tags: 'string[]', skills: 'string[]' }], languages: [{ name: 'string', level: 'Madrelingua|C2|C1|B2|B1|A2|A1', proficiency: 'number' }] }, null, 2);\nconst systemPrompt = 'Sei un parser di CV professionale. Estrai le informazioni strutturate dal testo del CV e restituisci SOLO un oggetto JSON valido.\\n\\nREGOLE FERREE — ZERO ALLUCINAZIONI:\\n1. NON inventare, supporre o dedurre informazioni non esplicitamente scritte nel CV.\\n2. Se un campo e poco chiaro, ambiguo o mancante: impostalo a null.\\n3. NON aggiungere esperienze, ruoli, competenze o date non nel testo.\\n4. Date in formato ISO YYYY-MM-DD. Solo anno noto: YYYY-01-01. Solo anno+mese: YYYY-MM-01. Sconosciuta: null.\\n5. is_current: true SOLO se il CV dice Presente, attuale, corrente o ongoing.\\n6. Lingue: livelli CEFR (A1, A2, B1, B2, C1, C2) o Madrelingua. Proficiency: A1=15, A2=30, B1=50, B2=65, C1=80, C2=95, Madrelingua=100.\\n7. Tipi esperienza — work: lavori/posizioni aziendali, education: studi/lauree/master, certification: certificazioni professionali (non linguistiche), volunteer: volontariato, project: progetti personali/accademici.\\n8. Certificazioni linguistiche (IELTS, TOEFL, DELF, ecc.) NON vanno in experiences, vanno in languages con il livello CEFR equivalente.\\n9. descriptions: copia il testo originale del CV, MAI inventato o abbellito. Se non c anulla: null.\\n10. tags: max 5 tag brevi e pertinenti (tecnologie, metodologie). skills: max 10 competenze brevi. Se vuoti: [].\\n\\nRestituisci SOLO JSON valido. Nessun markdown, nessuna spiegazione, nessun testo extra.\\n\\nSchema JSON atteso:\\n' + schemaExample;\nreturn [{ json: { openaiKey, request: { model: 'gpt-4o', messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: 'Testo del CV da analizzare:\\n\\n' + pdfText }], response_format: { type: 'json_object' }, temperature: 0, max_tokens: 4096 } } }];"
+            },
+            "id": "n4-prompt",
+            "name": "📝 Build AI Prompt",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [860, 0]
+        },
+        {
+            "parameters": {
+                "url": "https://api.openai.com/v1/chat/completions",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Authorization",
+                            "value": "=Bearer {{ $('📝 Build AI Prompt').first().json.openaiKey }}"
+                        },
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $('📝 Build AI Prompt').first().json.request }}"
+            },
+            "id": "n5-openai",
+            "name": "🤖 Call OpenAI",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [1080, 0]
+        },
+        {
+            "parameters": {
+                "jsCode": "const raw = $input.first().json.choices?.[0]?.message?.content;\nif (!raw) throw new Error('OpenAI non ha restituito contenuto');\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch (e) { throw new Error('JSON non valido da OpenAI: ' + raw.substring(0, 200)); }\nconst VALID_TYPES = ['work', 'education', 'certification', 'volunteer', 'project'];\nconst VALID_CEFR = ['Madrelingua', 'C2', 'C1', 'B2', 'B1', 'A2', 'A1'];\nconst CEFR_PROF = { Madrelingua: 100, C2: 95, C1: 80, B2: 65, B1: 50, A2: 30, A1: 15 };\nconst isValidDate = (d) => !d || /^\\d{4}-\\d{2}-\\d{2}$/.test(d);\nconst profile = { full_name: parsed.profile?.full_name || null, headline: parsed.profile?.headline || null, phone: parsed.profile?.phone || null, city: parsed.profile?.city || null, linkedin_url: parsed.profile?.linkedin_url || null, portfolio_url: parsed.profile?.portfolio_url || null, native_language: parsed.profile?.native_language || null };\nconst experiences = (Array.isArray(parsed.experiences) ? parsed.experiences : []).filter(e => e && e.title && VALID_TYPES.includes(e.type)).map(e => ({ type: e.type, title: String(e.title).substring(0, 255), organization: e.organization ? String(e.organization).substring(0, 255) : null, location: e.location ? String(e.location).substring(0, 255) : null, start_date: isValidDate(e.start_date) ? (e.start_date || null) : null, end_date: isValidDate(e.end_date) ? (e.end_date || null) : null, is_current: Boolean(e.is_current), description: e.description ? String(e.description).substring(0, 2000) : null, tags: Array.isArray(e.tags) ? e.tags.slice(0, 5).map(t => String(t)) : [], skills: Array.isArray(e.skills) ? e.skills.slice(0, 10).map(s => String(s)) : [] }));\nconst languages = (Array.isArray(parsed.languages) ? parsed.languages : []).filter(l => l && l.name && VALID_CEFR.includes(l.level)).map(l => ({ name: String(l.name), level: l.level, proficiency: CEFR_PROF[l.level] ?? 50 }));\nreturn [{ json: { profile, experiences, languages } }];"
+            },
+            "id": "n6-parse",
+            "name": "🔍 Parse & Validate",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [1300, 0]
+        },
+        {
+            "parameters": {
+                "respondWith": "firstIncomingItem",
+                "options": {}
+            },
+            "id": "n7-respond",
+            "name": "📤 Respond to Webhook",
+            "type": "n8n-nodes-base.respondToWebhook",
+            "typeVersion": 1,
+            "position": [1520, 0]
+        }
+    ],
+    "connections": {
+        "📥 Webhook Import": {
+            "main": [[{ "node": "⚙️ Config", "type": "main", "index": 0 }]]
+        },
+        "⚙️ Config": {
+            "main": [[{ "node": "📄 Extract PDF Text", "type": "main", "index": 0 }]]
+        },
+        "📄 Extract PDF Text": {
+            "main": [[{ "node": "📝 Build AI Prompt", "type": "main", "index": 0 }]]
+        },
+        "📝 Build AI Prompt": {
+            "main": [[{ "node": "🤖 Call OpenAI", "type": "main", "index": 0 }]]
+        },
+        "🤖 Call OpenAI": {
+            "main": [[{ "node": "🔍 Parse & Validate", "type": "main", "index": 0 }]]
+        },
+        "🔍 Parse & Validate": {
+            "main": [[{ "node": "📤 Respond to Webhook", "type": "main", "index": 0 }]]
+        }
+    },
+    "active": false,
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "meta": {
+        "instanceId": "careervault-import-pdf-v1"
+    }
+}

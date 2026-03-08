@@ -77,6 +77,7 @@ export interface GeneratedDocument {
     pdf_url: string | null;
     status: DocumentStatus;
     error_message: string | null;
+    title: string | null; // user assigned title
     template_id: string | null; // v2 — template selezionato
     /** JSON result from n8n — used by the app to render the PDF locally */
     generated_content: Json | null;

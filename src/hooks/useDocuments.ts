@@ -14,7 +14,7 @@ interface UseDocumentsReturn {
     loading: boolean;
     error: string | null;
     refresh: () => Promise<void>;
-    generate: (docType: DocumentType, jdText: string, templateId?: string) => Promise<GeneratedDocument>;
+    generate: (docType: DocumentType, jdText: string, title: string, templateId?: string) => Promise<GeneratedDocument>;
     remove: (id: string) => Promise<void>;
 }
 
@@ -54,13 +54,14 @@ export function useDocuments(): UseDocumentsReturn {
         async (
             docType: DocumentType,
             jdText: string,
+            title: string,
             templateId = 'modern'
         ): Promise<GeneratedDocument> => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Utente non autenticato');
 
             // 1. Create pending record
-            let doc = await createDocument(docType, jdText, templateId);
+            let doc = await createDocument(docType, jdText, title, templateId);
             setDocuments((prev) => [doc, ...prev]);
 
             try {
