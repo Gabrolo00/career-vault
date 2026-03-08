@@ -21,10 +21,17 @@ import { useExperiences } from '../../src/hooks/useExperiences';
 import { Experience, ExperienceType } from '../../src/types/database';
 import { colors, radius, spacing, TYPE_META, typography } from '../../src/theme';
 
-// ─── Schema (same as new.tsx but reused here) ─────────────────────────────────
+// ─── CEFR ─────────────────────────────────────────────────────────────────────
+
+const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Madrelingua'] as const;
+const CEFR_PROFICIENCY: Record<string, number> = {
+    A1: 15, A2: 30, B1: 50, B2: 65, C1: 80, C2: 95, Madrelingua: 100,
+};
+
+// ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-    type: z.enum(['work', 'education', 'project', 'certification', 'volunteer']),
+    type: z.enum(['work', 'education', 'project', 'certification', 'volunteer', 'language_cert']),
     title: z.string().min(2, 'Il titolo è obbligatorio'),
     organization: z.string().optional(),
     location: z.string().optional(),
@@ -42,6 +49,7 @@ const schema = z.object({
     description: z.string().optional(),
     skills: z.string(),
     tags: z.string(),
+    cefr_level: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -69,6 +77,8 @@ export default function ExperienceDetailScreen() {
 
     const isCurrent = watch('is_current');
     const selectedType = watch('type');
+    const cefrLevel = watch('cefr_level');
+    const isLangCert = selectedType === 'language_cert';
 
     // Load experience on mount
     useEffect(() => {
@@ -87,7 +97,8 @@ export default function ExperienceDetailScreen() {
                     is_current: data.is_current,
                     description: data.description ?? '',
                     skills: data.skills.join(', '),
-                    tags: data.tags.join(', '),
+                    tags: data.type === 'language_cert' ? '' : data.tags.join(', '),
+                    cefr_level: data.type === 'language_cert' ? (data.tags[0] ?? '') : '',
                 });
             } catch (e) {
                 setFetchError((e as Error).message);
@@ -100,22 +111,39 @@ export default function ExperienceDetailScreen() {
     const onSave = async (values: FormValues) => {
         if (!id) return;
         try {
-            const updated = await update(id, {
-                type: values.type,
-                title: values.title,
-                organization: values.organization || null,
-                location: values.location || null,
-                start_date: values.start_date || null,
-                end_date: values.is_current ? null : values.end_date || null,
-                is_current: values.is_current,
-                description: values.description || null,
-                skills: values.skills
-                    ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
-                    : [],
-                tags: values.tags
-                    ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
-                    : [],
-            });
+            let updated: Experience;
+            if (values.type === 'language_cert') {
+                updated = await update(id, {
+                    type: 'language_cert',
+                    title: values.title,
+                    organization: values.organization || null,
+                    location: null,
+                    start_date: values.start_date || null,
+                    end_date: null,
+                    is_current: false,
+                    description: values.description || null,
+                    skills: [],
+                    tags: values.cefr_level ? [values.cefr_level] : [],
+                    metadata: { proficiency: CEFR_PROFICIENCY[values.cefr_level ?? ''] ?? 0 },
+                });
+            } else {
+                updated = await update(id, {
+                    type: values.type,
+                    title: values.title,
+                    organization: values.organization || null,
+                    location: values.location || null,
+                    start_date: values.start_date || null,
+                    end_date: values.is_current ? null : values.end_date || null,
+                    is_current: values.is_current,
+                    description: values.description || null,
+                    skills: values.skills
+                        ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
+                        : [],
+                    tags: values.tags
+                        ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
+                        : [],
+                });
+            }
             setExp(updated);
             setIsEditMode(false);
         } catch (e) {
@@ -171,6 +199,8 @@ export default function ExperienceDetailScreen() {
     // ── View mode ───────────────────────────────────────────────────────────────
 
     if (!isEditMode) {
+        const cefrTag = exp.type === 'language_cert' ? exp.tags[0] : null;
+
         return (
             <View style={styles.flex}>
                 {/* Navbar */}
@@ -195,13 +225,20 @@ export default function ExperienceDetailScreen() {
                     {exp.organization && <Text style={styles.viewOrg}>{exp.organization}</Text>}
 
                     <View style={styles.metaRow}>
+                        {cefrTag && (
+                            <View style={[styles.cefrBadge, { backgroundColor: colors.language_cert + '22', borderColor: colors.language_cert + '55' }]}>
+                                <Text style={[styles.cefrBadgeText, { color: colors.language_cert }]}>
+                                    Livello {cefrTag}
+                                </Text>
+                            </View>
+                        )}
                         {exp.location && <Text style={styles.metaText}>📍 {exp.location}</Text>}
                         {exp.start_date && (
                             <Text style={styles.metaText}>
-                                🗓 {fmt(exp.start_date)} – {exp.is_current ? 'Presente' : exp.end_date ? fmt(exp.end_date) : '—'}
+                                🗓 {fmt(exp.start_date)}{exp.type !== 'language_cert' ? ` – ${exp.is_current ? 'Presente' : exp.end_date ? fmt(exp.end_date) : '—'}` : ''}
                             </Text>
                         )}
-                        {exp.is_current && (
+                        {exp.is_current && exp.type !== 'language_cert' && (
                             <View style={styles.currentBadge}>
                                 <Text style={styles.currentText}>● In corso</Text>
                             </View>
@@ -210,7 +247,9 @@ export default function ExperienceDetailScreen() {
 
                     {exp.description && (
                         <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Descrizione</Text>
+                            <Text style={styles.sectionTitle}>
+                                {exp.type === 'language_cert' ? 'Certificazione' : 'Descrizione'}
+                            </Text>
                             <Text style={styles.description}>{exp.description}</Text>
                         </View>
                     )}
@@ -228,7 +267,8 @@ export default function ExperienceDetailScreen() {
                         </View>
                     )}
 
-                    {exp.tags.length > 0 && (
+                    {/* Show tags only for non-language_cert types */}
+                    {exp.type !== 'language_cert' && exp.tags.length > 0 && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Tag</Text>
                             <View style={styles.chips}>
@@ -303,52 +343,87 @@ export default function ExperienceDetailScreen() {
                     })}
                 </View>
 
-                <EditField label="Titolo *" name="title" control={control} error={errors.title?.message} />
-                <EditField label="Azienda / Istituto" name="organization" control={control} />
-                <EditField label="Luogo" name="location" control={control} />
+                {isLangCert ? (
+                    // ── Language cert edit fields ───────────────────────────────
+                    <>
+                        <EditField label="Lingua *" name="title" control={control} error={errors.title?.message} />
+                        <EditField label="Ente certificatore" name="organization" control={control} placeholder="es. Cambridge, DELF…" />
+                        <EditField label="Nome certificazione" name="description" control={control} placeholder="es. Cambridge C1 Advanced" />
 
-                <View style={styles.row}>
-                    <EditField label="Data inizio" name="start_date" control={control} placeholder="YYYY-MM-DD" half />
-                    <EditField label="Data fine" name="end_date" control={control} placeholder="YYYY-MM-DD" half disabled={isCurrent} />
-                </View>
+                        {/* CEFR level selector */}
+                        <View style={styles.fieldWrap}>
+                            <Text style={styles.fieldLabel}>Livello CEFR</Text>
+                            <View style={styles.cefrGrid}>
+                                {CEFR_LEVELS.map((level) => {
+                                    const isSel = cefrLevel === level;
+                                    return (
+                                        <Pressable
+                                            key={level}
+                                            style={[styles.cefrChip, isSel && styles.cefrChipSelected]}
+                                            onPress={() => setValue('cefr_level', level, { shouldDirty: true })}
+                                        >
+                                            <Text style={[styles.cefrLabel, isSel && styles.cefrLabelSelected]}>
+                                                {level}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </View>
 
-                <View style={styles.toggle}>
-                    <Text style={styles.fieldLabel}>In corso</Text>
-                    <Controller
-                        control={control}
-                        name="is_current"
-                        render={({ field: { onChange, value } }) => (
-                            <Switch
-                                value={value}
-                                onValueChange={(v) => onChange(v)}
-                                trackColor={{ false: colors.border, true: colors.primary }}
-                                thumbColor={value ? '#fff' : colors.textMuted}
+                        <EditField label="Data conseguimento" name="start_date" control={control} placeholder="YYYY-MM-DD" />
+                    </>
+                ) : (
+                    // ── Generic edit fields ─────────────────────────────────────
+                    <>
+                        <EditField label="Titolo *" name="title" control={control} error={errors.title?.message} />
+                        <EditField label="Azienda / Istituto" name="organization" control={control} />
+                        <EditField label="Luogo" name="location" control={control} />
+
+                        <View style={styles.row}>
+                            <EditField label="Data inizio" name="start_date" control={control} placeholder="YYYY-MM-DD" half />
+                            <EditField label="Data fine" name="end_date" control={control} placeholder="YYYY-MM-DD" half disabled={isCurrent} />
+                        </View>
+
+                        <View style={styles.toggle}>
+                            <Text style={styles.fieldLabel}>In corso</Text>
+                            <Controller
+                                control={control}
+                                name="is_current"
+                                render={({ field: { onChange, value } }) => (
+                                    <Switch
+                                        value={value}
+                                        onValueChange={(v) => onChange(v)}
+                                        trackColor={{ false: colors.border, true: colors.primary }}
+                                        thumbColor={value ? '#fff' : colors.textMuted}
+                                    />
+                                )}
                             />
-                        )}
-                    />
-                </View>
+                        </View>
 
-                <Text style={styles.fieldLabel}>Descrizione</Text>
-                <Controller
-                    control={control}
-                    name="description"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <TextInput
-                            style={[styles.input, styles.textarea]}
-                            placeholder="Descrivi ruolo, risultati, impatto…"
-                            placeholderTextColor={colors.textPlaceholder}
-                            multiline
-                            numberOfLines={5}
-                            textAlignVertical="top"
-                            value={value}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
+                        <Text style={styles.fieldLabel}>Descrizione</Text>
+                        <Controller
+                            control={control}
+                            name="description"
+                            render={({ field: { onChange, value, onBlur } }) => (
+                                <TextInput
+                                    style={[styles.input, styles.textarea]}
+                                    placeholder="Descrivi ruolo, risultati, impatto…"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    multiline
+                                    numberOfLines={5}
+                                    textAlignVertical="top"
+                                    value={value}
+                                    onChangeText={onChange}
+                                    onBlur={onBlur}
+                                />
+                            )}
                         />
-                    )}
-                />
 
-                <EditField label="Skills (virgola)" name="skills" control={control} />
-                <EditField label="Tag (virgola)" name="tags" control={control} />
+                        <EditField label="Skills (virgola)" name="skills" control={control} />
+                        <EditField label="Tag (virgola)" name="tags" control={control} />
+                    </>
+                )}
             </ScrollView>
         </KeyboardAvoidingView>
     );
@@ -417,8 +492,10 @@ const styles = StyleSheet.create({
     badgeLabel: { fontSize: 12, fontWeight: '700' },
     viewTitle: { ...typography.h2, lineHeight: 30, marginTop: 4 },
     viewOrg: { ...typography.body, color: colors.textSecondary },
-    metaRow: { flexDirection: 'row', gap: spacing.md, flexWrap: 'wrap' },
+    metaRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', alignItems: 'center' },
     metaText: { fontSize: 13, color: colors.textMuted },
+    cefrBadge: { borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 4, borderWidth: 1 },
+    cefrBadgeText: { fontSize: 13, fontWeight: '700' },
     currentBadge: { backgroundColor: colors.success + '22', borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3 },
     currentText: { color: colors.success, fontSize: 12, fontWeight: '700' },
     section: { gap: spacing.xs },
@@ -446,4 +523,9 @@ const styles = StyleSheet.create({
     errText: { fontSize: 12, color: colors.error },
     row: { flexDirection: 'row', gap: spacing.sm },
     toggle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.bgCard, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.border },
+    cefrGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+    cefrChip: { backgroundColor: colors.bgCard, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: colors.border },
+    cefrChipSelected: { backgroundColor: colors.language_cert + '22', borderColor: colors.language_cert },
+    cefrLabel: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+    cefrLabelSelected: { color: colors.language_cert },
 });

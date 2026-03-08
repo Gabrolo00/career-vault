@@ -23,7 +23,8 @@ export type ExperienceType =
     | 'education'
     | 'project'
     | 'certification'
-    | 'volunteer';
+    | 'volunteer'
+    | 'language_cert';
 
 export type DocumentType = 'cv' | 'cover_letter';
 export type DocumentStatus = 'pending' | 'processing' | 'completed' | 'failed';

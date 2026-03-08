@@ -20,10 +20,17 @@ import { DatePickerField } from '../../src/components/DatePickerField';
 import { colors, radius, spacing, TYPE_META, typography } from '../../src/theme';
 import { ExperienceType } from '../../src/types/database';
 
+// ─── CEFR ─────────────────────────────────────────────────────────────────────
+
+const CEFR_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Madrelingua'] as const;
+const CEFR_PROFICIENCY: Record<string, number> = {
+    A1: 15, A2: 30, B1: 50, B2: 65, C1: 80, C2: 95, Madrelingua: 100,
+};
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
-    type: z.enum(['work', 'education', 'project', 'certification', 'volunteer']),
+    type: z.enum(['work', 'education', 'project', 'certification', 'volunteer', 'language_cert']),
     title: z.string().min(2, 'Il titolo è obbligatorio'),
     organization: z.string().optional(),
     location: z.string().optional(),
@@ -33,6 +40,7 @@ const schema = z.object({
     description: z.string().optional(),
     skills: z.string(), // comma-separated, parsed on submit
     tags: z.string(),   // comma-separated
+    cefr_level: z.string().optional(), // used only for language_cert
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -62,31 +70,50 @@ export default function NewExperienceScreen() {
             description: '',
             skills: '',
             tags: '',
+            cefr_level: '',
         },
     });
 
     const isCurrent = watch('is_current');
     const selectedType = watch('type');
+    const cefrLevel = watch('cefr_level');
+    const isLangCert = selectedType === 'language_cert';
 
     const onSubmit = async (values: FormValues) => {
         try {
-            await add({
-                type: values.type,
-                title: values.title,
-                organization: values.organization || null,
-                location: values.location || null,
-                start_date: values.start_date || null,
-                end_date: values.is_current ? null : values.end_date || null,
-                is_current: values.is_current,
-                description: values.description || null,
-                skills: values.skills
-                    ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
-                    : [],
-                tags: values.tags
-                    ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
-                    : [],
-                metadata: {},
-            });
+            if (values.type === 'language_cert') {
+                await add({
+                    type: 'language_cert',
+                    title: values.title,
+                    organization: values.organization || null,
+                    location: null,
+                    start_date: values.start_date || null,
+                    end_date: null,
+                    is_current: false,
+                    description: values.description || null,
+                    skills: [],
+                    tags: values.cefr_level ? [values.cefr_level] : [],
+                    metadata: { proficiency: CEFR_PROFICIENCY[values.cefr_level ?? ''] ?? 0 },
+                });
+            } else {
+                await add({
+                    type: values.type,
+                    title: values.title,
+                    organization: values.organization || null,
+                    location: values.location || null,
+                    start_date: values.start_date || null,
+                    end_date: values.is_current ? null : values.end_date || null,
+                    is_current: values.is_current,
+                    description: values.description || null,
+                    skills: values.skills
+                        ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
+                        : [],
+                    tags: values.tags
+                        ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
+                        : [],
+                    metadata: {},
+                });
+            }
             router.back();
         } catch (e) {
             console.error(e);
@@ -144,120 +171,185 @@ export default function NewExperienceScreen() {
                 </View>
                 {errors.type && <Text style={styles.errText}>{errors.type.message}</Text>}
 
-                {/* Title */}
-                <FormField
-                    label="Titolo *"
-                    placeholder="es. Senior Software Engineer"
-                    control={control}
-                    name="title"
-                    error={errors.title?.message}
-                />
+                {isLangCert ? (
+                    // ── Language cert fields ────────────────────────────────────
+                    <>
+                        <FormField
+                            label="Lingua *"
+                            placeholder="es. Inglese"
+                            control={control}
+                            name="title"
+                            error={errors.title?.message}
+                        />
 
-                {/* Organization */}
-                <FormField
-                    label="Azienda / Istituto"
-                    placeholder="es. Google"
-                    control={control}
-                    name="organization"
-                    error={errors.organization?.message}
-                />
+                        <FormField
+                            label="Ente certificatore"
+                            placeholder="es. Cambridge, DELF, Goethe-Institut…"
+                            control={control}
+                            name="organization"
+                            error={errors.organization?.message}
+                        />
 
-                {/* Location */}
-                <FormField
-                    label="Luogo"
-                    placeholder="es. Milano, IT (o Remoto)"
-                    control={control}
-                    name="location"
-                    error={errors.location?.message}
-                />
+                        <FormField
+                            label="Nome certificazione"
+                            placeholder="es. Cambridge C1 Advanced"
+                            control={control}
+                            name="description"
+                            error={errors.description?.message}
+                        />
 
-                {/* Dates row */}
-                <View style={styles.row}>
-                    <View style={styles.halfField}>
+                        {/* CEFR level selector */}
+                        <View style={styles.fieldWrap}>
+                            <Text style={styles.label}>Livello CEFR</Text>
+                            <View style={styles.cefrGrid}>
+                                {CEFR_LEVELS.map((level) => {
+                                    const isSelected = cefrLevel === level;
+                                    return (
+                                        <Pressable
+                                            key={level}
+                                            style={[
+                                                styles.cefrChip,
+                                                isSelected && styles.cefrChipSelected,
+                                            ]}
+                                            onPress={() => setValue('cefr_level', level)}
+                                        >
+                                            <Text style={[styles.cefrLabel, isSelected && styles.cefrLabelSelected]}>
+                                                {level}
+                                            </Text>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </View>
+
+                        {/* Date obtained */}
                         <Controller
                             control={control}
                             name="start_date"
                             render={({ field: { onChange, value } }) => (
                                 <DatePickerField
-                                    label="Data inizio"
+                                    label="Data conseguimento"
                                     value={value ?? ''}
                                     onChange={onChange}
                                     maxDate={new Date()}
                                 />
                             )}
                         />
-                    </View>
-                    <View style={styles.halfField}>
+                    </>
+                ) : (
+                    // ── Generic experience fields ───────────────────────────────
+                    <>
+                        <FormField
+                            label="Titolo *"
+                            placeholder="es. Senior Software Engineer"
+                            control={control}
+                            name="title"
+                            error={errors.title?.message}
+                        />
+
+                        <FormField
+                            label="Azienda / Istituto"
+                            placeholder="es. Google"
+                            control={control}
+                            name="organization"
+                            error={errors.organization?.message}
+                        />
+
+                        <FormField
+                            label="Luogo"
+                            placeholder="es. Milano, IT (o Remoto)"
+                            control={control}
+                            name="location"
+                            error={errors.location?.message}
+                        />
+
+                        {/* Dates row */}
+                        <View style={styles.row}>
+                            <View style={styles.halfField}>
+                                <Controller
+                                    control={control}
+                                    name="start_date"
+                                    render={({ field: { onChange, value } }) => (
+                                        <DatePickerField
+                                            label="Data inizio"
+                                            value={value ?? ''}
+                                            onChange={onChange}
+                                            maxDate={new Date()}
+                                        />
+                                    )}
+                                />
+                            </View>
+                            <View style={styles.halfField}>
+                                <Controller
+                                    control={control}
+                                    name="end_date"
+                                    render={({ field: { onChange, value } }) => (
+                                        <DatePickerField
+                                            label="Data fine"
+                                            value={isCurrent ? '' : (value ?? '')}
+                                            onChange={onChange}
+                                            disabled={isCurrent}
+                                            maxDate={new Date()}
+                                        />
+                                    )}
+                                />
+                            </View>
+                        </View>
+
+                        {/* Is current toggle */}
+                        <View style={styles.toggle}>
+                            <Text style={styles.label}>Esperienza in corso</Text>
+                            <Controller
+                                control={control}
+                                name="is_current"
+                                render={({ field: { onChange, value } }) => (
+                                    <Switch
+                                        value={value}
+                                        onValueChange={onChange}
+                                        trackColor={{ false: colors.border, true: colors.primary }}
+                                        thumbColor={value ? '#fff' : colors.textMuted}
+                                    />
+                                )}
+                            />
+                        </View>
+
+                        {/* Description */}
+                        <Text style={styles.label}>Descrizione</Text>
                         <Controller
                             control={control}
-                            name="end_date"
-                            render={({ field: { onChange, value } }) => (
-                                <DatePickerField
-                                    label="Data fine"
-                                    value={isCurrent ? '' : (value ?? '')}
-                                    onChange={onChange}
-                                    disabled={isCurrent}
-                                    maxDate={new Date()}
+                            name="description"
+                            render={({ field: { onChange, value, onBlur } }) => (
+                                <TextInput
+                                    style={[styles.input, styles.textarea]}
+                                    placeholder="Descrivi attività, responsabilità, risultati…"
+                                    placeholderTextColor={colors.textPlaceholder}
+                                    multiline
+                                    numberOfLines={5}
+                                    textAlignVertical="top"
+                                    value={value}
+                                    onChangeText={onChange}
+                                    onBlur={onBlur}
                                 />
                             )}
                         />
-                    </View>
-                </View>
 
-                {/* Is current toggle */}
-                <View style={styles.toggle}>
-                    <Text style={styles.label}>Esperienza in corso</Text>
-                    <Controller
-                        control={control}
-                        name="is_current"
-                        render={({ field: { onChange, value } }) => (
-                            <Switch
-                                value={value}
-                                onValueChange={onChange}
-                                trackColor={{ false: colors.border, true: colors.primary }}
-                                thumbColor={value ? '#fff' : colors.textMuted}
-                            />
-                        )}
-                    />
-                </View>
-
-                {/* Description */}
-                <Text style={styles.label}>Descrizione</Text>
-                <Controller
-                    control={control}
-                    name="description"
-                    render={({ field: { onChange, value, onBlur } }) => (
-                        <TextInput
-                            style={[styles.input, styles.textarea]}
-                            placeholder="Descrivi attività, responsabilità, risultati…"
-                            placeholderTextColor={colors.textPlaceholder}
-                            multiline
-                            numberOfLines={5}
-                            textAlignVertical="top"
-                            value={value}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
+                        <FormField
+                            label="Skills (separati da virgola)"
+                            placeholder="es. React Native, TypeScript, Supabase"
+                            control={control}
+                            name="skills"
+                            error={errors.skills?.message}
                         />
-                    )}
-                />
 
-                {/* Skills */}
-                <FormField
-                    label="Skills (separati da virgola)"
-                    placeholder="es. React Native, TypeScript, Supabase"
-                    control={control}
-                    name="skills"
-                    error={errors.skills?.message}
-                />
-
-                {/* Tags */}
-                <FormField
-                    label="Tag (separati da virgola)"
-                    placeholder="es. backend, leadership, agile"
-                    control={control}
-                    name="tags"
-                    error={errors.tags?.message}
-                />
+                        <FormField
+                            label="Tag (separati da virgola)"
+                            placeholder="es. backend, leadership, agile"
+                            control={control}
+                            name="tags"
+                            error={errors.tags?.message}
+                        />
+                    </>
+                )}
 
                 {/* Submit */}
                 <Pressable
@@ -268,7 +360,7 @@ export default function NewExperienceScreen() {
                     {isSubmitting ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={styles.submitText}>💾 Salva esperienza</Text>
+                        <Text style={styles.submitText}>Salva esperienza</Text>
                     )}
                 </Pressable>
             </ScrollView>
@@ -350,6 +442,23 @@ const styles = StyleSheet.create({
     },
     typeEmoji: { fontSize: 14 },
     typeLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+
+    // CEFR selector
+    cefrGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+    cefrChip: {
+        backgroundColor: colors.bgCard,
+        borderRadius: radius.md,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    cefrChipSelected: {
+        backgroundColor: colors.language_cert + '22',
+        borderColor: colors.language_cert,
+    },
+    cefrLabel: { fontSize: 13, fontWeight: '700', color: colors.textMuted },
+    cefrLabelSelected: { color: colors.language_cert },
 
     // Fields
     fieldWrap: { gap: 6 },

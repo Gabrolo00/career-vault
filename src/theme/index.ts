@@ -35,6 +35,7 @@ export const colors = {
     project: '#8B5CF6',  // violet
     certification: '#F59E0B',  // amber
     volunteer: '#EC4899',  // pink
+    language_cert: '#10B981',  // emerald
 } as const;
 
 export const spacing = {
@@ -77,6 +78,7 @@ export const TYPE_META: Record<string, { label: string; iconName: string; color:
     project: { label: 'Progetto', iconName: 'rocket', color: colors.project },
     certification: { label: 'Certificazione', iconName: 'ribbon', color: colors.certification },
     volunteer: { label: 'Volontariato', iconName: 'heart', color: colors.volunteer },
+    language_cert: { label: 'Cert. Lingua', iconName: 'language', color: colors.language_cert },
 };
 
 // Status icons for documents
