@@ -2,6 +2,7 @@ import { DocumentType } from '../types/database';
 import { N8nGenerationResult } from '../types/generation';
 
 const WEBHOOK_URL = process.env.EXPO_PUBLIC_N8N_WEBHOOK_URL;
+const WEBHOOK_SECRET = process.env.EXPO_PUBLIC_N8N_WEBHOOK_SECRET ?? '';
 
 // ─── Payload ──────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ export async function triggerGeneration(
         headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
+            'x-internal-secret': WEBHOOK_SECRET,
         },
         body: JSON.stringify(payload),
     });

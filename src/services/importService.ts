@@ -4,6 +4,7 @@ import { ImportResult, ImportSummary } from '../types/import';
 import { ProfileUpdate } from '../types/database';
 
 const IMPORT_WEBHOOK_URL = process.env.EXPO_PUBLIC_N8N_IMPORT_WEBHOOK_URL;
+const WEBHOOK_SECRET = process.env.EXPO_PUBLIC_N8N_WEBHOOK_SECRET ?? '';
 
 const CEFR_PROFICIENCY: Record<string, number> = {
     Madrelingua: 100,
@@ -50,7 +51,10 @@ export async function importCVFromPDF(
     const response = await fetch(IMPORT_WEBHOOK_URL, {
         method: 'POST',
         body: formData,
-        headers: { Accept: 'application/json' },
+        headers: {
+            Accept: 'application/json',
+            'x-internal-secret': WEBHOOK_SECRET,
+        },
     });
 
     if (!response.ok) {
@@ -66,12 +70,12 @@ export async function importCVFromPDF(
 
     const profilePayload: ProfileUpdate = {};
     const p = result.profile;
-    if (p.full_name)      profilePayload.full_name      = p.full_name;
-    if (p.headline)       profilePayload.headline       = p.headline;
-    if (p.phone)          profilePayload.phone          = p.phone;
-    if (p.city)           profilePayload.city           = p.city;
-    if (p.linkedin_url)   profilePayload.linkedin_url   = p.linkedin_url;
-    if (p.portfolio_url)  profilePayload.portfolio_url  = p.portfolio_url;
+    if (p.full_name) profilePayload.full_name = p.full_name;
+    if (p.headline) profilePayload.headline = p.headline;
+    if (p.phone) profilePayload.phone = p.phone;
+    if (p.city) profilePayload.city = p.city;
+    if (p.linkedin_url) profilePayload.linkedin_url = p.linkedin_url;
+    if (p.portfolio_url) profilePayload.portfolio_url = p.portfolio_url;
     if (p.native_language) profilePayload.native_language = p.native_language;
 
     const profileUpdated = Object.keys(profilePayload).length > 0;
