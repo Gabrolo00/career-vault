@@ -40,6 +40,20 @@ export interface N8nExperienceItem {
     tags: string[];
 }
 
+// ─── Project entry ──────────────────────────────────────────────────────────
+
+export interface N8nProjectItem {
+    title: string;
+    /** Optional: GitHub URL, company name, client, etc. */
+    organization: string;
+    /** Human-readable period, e.g. "2023" or "Gen 2022 – Mar 2023" */
+    period: string;
+    /** AI-reworked description highlighting relevance to the JD */
+    description: string;
+    /** Tech-stack and skill tags relevant to this JD */
+    tags: string[];
+}
+
 // ─── Language entry ───────────────────────────────────────────────────────────
 
 export interface N8nLanguageItem {
@@ -59,6 +73,8 @@ export interface N8nGenerationResult {
     profile_summary: string;
     /** Work experiences selected and reworked by RAG */
     experiences: N8nExperienceItem[];
+    /** Personal / side projects */
+    projects: N8nProjectItem[];
     /** Education entries */
     education: N8nExperienceItem[];
     /** Certification entries */
@@ -68,3 +84,4 @@ export interface N8nGenerationResult {
     /** Languages from user profile */
     languages: N8nLanguageItem[];
 }
+

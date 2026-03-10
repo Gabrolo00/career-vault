@@ -48,7 +48,6 @@ const schema = z.object({
     is_current: z.boolean(),
     description: z.string().optional(),
     skills: z.string(),
-    tags: z.string(),
     cefr_level: z.string().optional(),
 });
 
@@ -97,7 +96,6 @@ export default function ExperienceDetailScreen() {
                     is_current: data.is_current,
                     description: data.description ?? '',
                     skills: data.skills.join(', '),
-                    tags: data.type === 'language_cert' ? '' : data.tags.join(', '),
                     cefr_level: data.type === 'language_cert' ? (data.tags[0] ?? '') : '',
                 });
             } catch (e) {
@@ -139,9 +137,7 @@ export default function ExperienceDetailScreen() {
                     skills: values.skills
                         ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
                         : [],
-                    tags: values.tags
-                        ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
-                        : [],
+                    tags: [],
                 });
             }
             setExp(updated);
@@ -267,19 +263,7 @@ export default function ExperienceDetailScreen() {
                         </View>
                     )}
 
-                    {/* Show tags only for non-language_cert types */}
-                    {exp.type !== 'language_cert' && exp.tags.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Tag</Text>
-                            <View style={styles.chips}>
-                                {exp.tags.map((t) => (
-                                    <View key={t} style={[styles.chip, styles.tagChip]}>
-                                        <Text style={[styles.chipText, styles.tagText]}>#{t}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </View>
-                    )}
+                    {/* No tags section — tags replaced by skills going forward */}
 
                     {/* Delete */}
                     <Pressable style={styles.deleteBtn} onPress={onDelete}>
@@ -420,8 +404,12 @@ export default function ExperienceDetailScreen() {
                             )}
                         />
 
-                        <EditField label="Skills (virgola)" name="skills" control={control} />
-                        <EditField label="Tag (virgola)" name="tags" control={control} />
+                        <EditField
+                            label="Competenze e Strumenti usati (separati da virgola)"
+                            name="skills"
+                            control={control}
+                            placeholder="es. React Native, TypeScript, Supabase"
+                        />
                     </>
                 )}
             </ScrollView>

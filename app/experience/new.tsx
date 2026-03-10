@@ -39,7 +39,6 @@ const schema = z.object({
     is_current: z.boolean(),
     description: z.string().optional(),
     skills: z.string(), // comma-separated, parsed on submit
-    tags: z.string(),   // comma-separated
     cefr_level: z.string().optional(), // used only for language_cert
 });
 
@@ -69,7 +68,6 @@ export default function NewExperienceScreen() {
             is_current: false,
             description: '',
             skills: '',
-            tags: '',
             cefr_level: '',
         },
     });
@@ -108,9 +106,7 @@ export default function NewExperienceScreen() {
                     skills: values.skills
                         ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
                         : [],
-                    tags: values.tags
-                        ? values.tags.split(',').map((t) => t.trim()).filter(Boolean)
-                        : [],
+                    tags: [],
                     metadata: {},
                 });
             }
@@ -334,19 +330,11 @@ export default function NewExperienceScreen() {
                         />
 
                         <FormField
-                            label="Skills (separati da virgola)"
+                            label="Competenze e Strumenti usati (separati da virgola)"
                             placeholder="es. React Native, TypeScript, Supabase"
                             control={control}
                             name="skills"
                             error={errors.skills?.message}
-                        />
-
-                        <FormField
-                            label="Tag (separati da virgola)"
-                            placeholder="es. backend, leadership, agile"
-                            control={control}
-                            name="tags"
-                            error={errors.tags?.message}
                         />
                     </>
                 )}

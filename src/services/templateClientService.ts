@@ -25,8 +25,8 @@ const MODERN_HTML = `<!DOCTYPE html>
     font-family: 'Inter', system-ui, sans-serif;
     background: #fff;
     color: #1e293b;
-    font-size: 11px;
-    line-height: 1.6;
+    font-size: 10px;
+    line-height: 1.5;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -184,7 +184,7 @@ const MODERN_HTML = `<!DOCTYPE html>
   }
 
   /* Timeline entries */
-  .timeline { display: flex; flex-direction: column; gap: 16px; }
+  .timeline { display: flex; flex-direction: column; gap: 12px; }
 
   .entry {
     display: flex;
@@ -219,7 +219,7 @@ const MODERN_HTML = `<!DOCTYPE html>
     margin-bottom: 2px;
   }
   .entry-title {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #1e293b;
     line-height: 1.3;
@@ -231,10 +231,10 @@ const MODERN_HTML = `<!DOCTYPE html>
     margin-top: 1px;
   }
   .entry-desc {
-    font-size: 10px;
+    font-size: 9px;
     color: #64748b;
-    line-height: 1.65;
-    margin-top: 5px;
+    line-height: 1.55;
+    margin-top: 4px;
   }
   .entry-tags {
     display: flex;
@@ -256,26 +256,25 @@ const MODERN_HTML = `<!DOCTYPE html>
     background: linear-gradient(135deg, #eff6ff, #f0f9ff);
     border-left: 3px solid #2563eb;
     border-radius: 0 8px 8px 0;
-    padding: 16px 20px;
-    font-size: 11px;
+    padding: 12px 16px;
+    font-size: 9.5px;
     color: #334155;
-    line-height: 1.8;
+    line-height: 1.7;
   }
-  .summary-box p { margin-bottom: 10px; }
+  .summary-box p { margin-bottom: 8px; }
   .summary-box p:last-child { margin-bottom: 0; }
 
-  /* Language cards (main body) */
-  .lang-grid { display: flex; flex-direction: column; gap: 8px; }
-  .lang-card { }
-  .lang-card-name { font-size: 10.5px; font-weight: 700; color: #1e293b; margin-bottom: 5px; }
-  .lang-table { display: flex; border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden; }
-  .lang-col { flex: 1; padding: 6px 9px; border-right: 1px solid #e2e8f0; }
-  .lang-col-lvl { flex: 0 0 54px; text-align: center; border-right: none; }
-  .lang-col-head { font-size: 8px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
-  .lang-bar { height: 3px; background: #e2e8f0; border-radius: 2px; overflow: hidden; }
+  /* Language — compact 2-column grid */
+  .lang-grid { display: flex; flex-direction: column; gap: 4px; }
+  .lang-row { display: flex; gap: 8px; border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden; }
+  .lang-cell { flex: 1; padding: 5px 8px; border-right: 1px solid #e2e8f0; }
+  .lang-cell:last-child { border-right: none; }
+  .lang-cell-header { display: flex; align-items: baseline; gap: 4px; margin-bottom: 3px; }
+  .lang-cell-name { font-size: 9px; font-weight: 700; color: #1e293b; }
+  .lang-cell-level { font-size: 8.5px; font-weight: 700; color: #2563eb; }
+  .lang-bar { height: 3px; background: #e2e8f0; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
   .lang-bar-fill { height: 100%; background: #2563eb; border-radius: 2px; }
-  .lang-lvl-badge { font-size: 14px; font-weight: 800; color: #2563eb; display: inline-block; padding-top: 2px; }
-  .lang-native-badge { font-size: 9.5px; font-weight: 700; color: #2563eb; display: inline-block; padding-top: 2px; }
+  .lang-cell-label { font-size: 7.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
 </style>
 </head>
 <body>
@@ -368,6 +367,20 @@ const MODERN_HTML = `<!DOCTYPE html>
       </div>
     </section>
 
+    <!-- Projects -->
+    {{#if projects_html}}
+    <section>
+      <div class="section-header">
+        <div class="dot"></div>
+        <h2>Progetti</h2>
+        <div class="line"></div>
+      </div>
+      <div class="timeline">
+        {{projects_html}}
+      </div>
+    </section>
+    {{/if}}
+
     <!-- Education -->
     {{#if education_html}}
     <section>
@@ -443,8 +456,8 @@ const MINIMAL_HTML = `<!DOCTYPE html>
             font-family: 'DM Sans', system-ui, sans-serif;
             background: #ffffff;
             color: #1a1a1a;
-            font-size: 11px;
-            line-height: 1.65;
+            font-size: 10px;
+            line-height: 1.55;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -562,7 +575,7 @@ const MINIMAL_HTML = `<!DOCTYPE html>
 
         /* ── ENTRIES ── */
         .entry {
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .entry:last-child {
@@ -577,7 +590,7 @@ const MINIMAL_HTML = `<!DOCTYPE html>
         }
 
         .entry-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             color: #1a1a1a;
             line-height: 1.3;
@@ -601,19 +614,19 @@ const MINIMAL_HTML = `<!DOCTYPE html>
         }
 
         .entry-desc {
-            font-size: 10px;
+            font-size: 9px;
             color: #555;
-            line-height: 1.7;
+            line-height: 1.6;
         }
 
         /* Profile summary */
         .summary-text {
-            font-size: 11px;
+            font-size: 9.5px;
             color: #333;
-            line-height: 1.8;
+            line-height: 1.7;
             font-weight: 300;
         }
-        .summary-text p { margin-bottom: 12px; }
+        .summary-text p { margin-bottom: 8px; }
         .summary-text p:last-child { margin-bottom: 0; }
 
         /* ── SIDE COLUMN ITEMS ── */
@@ -650,40 +663,17 @@ const MINIMAL_HTML = `<!DOCTYPE html>
             border-bottom: none;
         }
 
-        /* Language bars */
-        .lang-item {
-            margin-bottom: 9px;
-        }
-
-        .lang-name-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
-
-        .lang-name {
-            font-size: 10px;
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-
-        .lang-level {
-            font-size: 9px;
-            color: #888;
-        }
-
-        /* Language cards */
-        .lang-grid { display: flex; flex-direction: column; gap: 8px; }
-        .lang-card { }
-        .lang-card-name { font-size: 10.5px; font-weight: 700; color: #1a1a1a; margin-bottom: 5px; }
-        .lang-table { display: flex; border: 1px solid #e5e5e5; border-radius: 4px; overflow: hidden; }
-        .lang-col { flex: 1; padding: 6px 9px; border-right: 1px solid #e5e5e5; }
-        .lang-col-lvl { flex: 0 0 54px; text-align: center; border-right: none; }
-        .lang-col-head { font-size: 8px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
-        .lang-bar { height: 3px; background: #e5e5e5; border-radius: 2px; overflow: hidden; }
+        /* Language — compact 2-column grid */
+        .lang-grid { display: flex; flex-direction: column; gap: 4px; }
+        .lang-row { display: flex; gap: 8px; border: 1px solid #e5e5e5; border-radius: 4px; overflow: hidden; }
+        .lang-cell { flex: 1; padding: 5px 8px; border-right: 1px solid #e5e5e5; }
+        .lang-cell:last-child { border-right: none; }
+        .lang-cell-header { display: flex; align-items: baseline; gap: 4px; margin-bottom: 3px; }
+        .lang-cell-name { font-size: 9px; font-weight: 700; color: #1a1a1a; }
+        .lang-cell-level { font-size: 8.5px; font-weight: 700; color: #1a1a1a; }
+        .lang-bar { height: 3px; background: #e5e5e5; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
         .lang-bar-fill { height: 100%; background: #1a1a1a; border-radius: 2px; }
-        .lang-lvl-badge { font-size: 14px; font-weight: 800; color: #1a1a1a; display: inline-block; padding-top: 2px; }
-        .lang-native-badge { font-size: 9.5px; font-weight: 700; color: #1a1a1a; display: inline-block; padding-top: 2px; }
+        .lang-cell-label { font-size: 7.5px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 
@@ -725,6 +715,14 @@ const MINIMAL_HTML = `<!DOCTYPE html>
                     <div class="section-divider"></div>
                     {{experiences_html}}
                 </section>
+
+                {{#if projects_html}}
+                <section class="section">
+                    <div class="section-title">Progetti</div>
+                    <div class="section-divider"></div>
+                    {{projects_html}}
+                </section>
+                {{/if}}
 
                 {{#if education_html}}
                 <section class="section">
@@ -801,8 +799,8 @@ const CREATIVE_HTML = `<!DOCTYPE html>
             font-family: 'Poppins', system-ui, sans-serif;
             background: #fff;
             color: #1e1b2e;
-            font-size: 11px;
-            line-height: 1.6;
+            font-size: 10px;
+            line-height: 1.5;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
@@ -1065,9 +1063,9 @@ const CREATIVE_HTML = `<!DOCTYPE html>
         }
 
         .entry-card-desc {
-            font-size: 10px;
+            font-size: 9px;
             color: #64748b;
-            line-height: 1.7;
+            line-height: 1.6;
         }
 
         .entry-card-tags {
@@ -1091,26 +1089,25 @@ const CREATIVE_HTML = `<!DOCTYPE html>
             background: linear-gradient(135deg, rgba(108, 61, 232, 0.06), rgba(247, 97, 95, 0.04));
             border: 1px solid rgba(108, 61, 232, 0.12);
             border-radius: 10px;
-            padding: 16px 18px;
-            font-size: 11px;
+            padding: 12px 16px;
+            font-size: 9.5px;
             color: #334155;
-            line-height: 1.8;
+            line-height: 1.7;
         }
-        .profile-card p { margin-bottom: 10px; }
+        .profile-card p { margin-bottom: 8px; }
         .profile-card p:last-child { margin-bottom: 0; }
 
-        /* Language cards (main body) */
-        .lang-grid { display: flex; flex-direction: column; gap: 8px; }
-        .lang-card { }
-        .lang-card-name { font-size: 10.5px; font-weight: 700; color: #1e1b2e; margin-bottom: 5px; }
-        .lang-table { display: flex; border: 1px solid #ede9fe; border-radius: 6px; overflow: hidden; }
-        .lang-col { flex: 1; padding: 6px 9px; border-right: 1px solid #ede9fe; }
-        .lang-col-lvl { flex: 0 0 54px; text-align: center; border-right: none; }
-        .lang-col-head { font-size: 8px; font-weight: 600; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
-        .lang-bar { height: 3px; background: #ede9fe; border-radius: 2px; overflow: hidden; }
+        /* Language — compact 2-column grid */
+        .lang-grid { display: flex; flex-direction: column; gap: 4px; }
+        .lang-row { display: flex; gap: 8px; border: 1px solid #ede9fe; border-radius: 6px; overflow: hidden; }
+        .lang-cell { flex: 1; padding: 5px 8px; border-right: 1px solid #ede9fe; }
+        .lang-cell:last-child { border-right: none; }
+        .lang-cell-header { display: flex; align-items: baseline; gap: 4px; margin-bottom: 3px; }
+        .lang-cell-name { font-size: 9px; font-weight: 700; color: #1e1b2e; }
+        .lang-cell-level { font-size: 8.5px; font-weight: 700; color: var(--accent-1); }
+        .lang-bar { height: 3px; background: #ede9fe; border-radius: 2px; overflow: hidden; margin-bottom: 2px; }
         .lang-bar-fill { height: 100%; background: var(--accent-1); border-radius: 2px; }
-        .lang-lvl-badge { font-size: 14px; font-weight: 800; color: var(--accent-1); display: inline-block; padding-top: 2px; }
-        .lang-native-badge { font-size: 9.5px; font-weight: 700; color: var(--accent-1); display: inline-block; padding-top: 2px; }
+        .lang-cell-label { font-size: 7.5px; color: #a78bfa; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 
@@ -1251,6 +1248,18 @@ const CREATIVE_HTML = `<!DOCTYPE html>
                 </div>
                 {{experiences_html}}
             </section>
+
+            {{#if projects_html}}
+            <section>
+                <div class="section-title">
+                    <div class="section-title-badge">
+                        <svg viewBox="0 0 24 24"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                    </div>
+                    <h2>Progetti</h2>
+                </div>
+                {{projects_html}}
+            </section>
+            {{/if}}
 
             {{#if education_html}}
             <section>
