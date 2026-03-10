@@ -90,8 +90,7 @@ export default function NewExperienceScreen() {
                     is_current: false,
                     description: values.description || null,
                     skills: [],
-                    tags: values.cefr_level ? [values.cefr_level] : [],
-                    metadata: { proficiency: CEFR_PROFICIENCY[values.cefr_level ?? ''] ?? 0 },
+                    metadata: { proficiency: CEFR_PROFICIENCY[values.cefr_level ?? ''] ?? 0, cefr_level: values.cefr_level ?? null },
                 });
             } else {
                 await add({
@@ -106,7 +105,6 @@ export default function NewExperienceScreen() {
                     skills: values.skills
                         ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
                         : [],
-                    tags: [],
                     metadata: {},
                 });
             }

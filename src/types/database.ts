@@ -59,7 +59,6 @@ export interface Experience {
     end_date: string | null;
     is_current: boolean;
     description: string | null;
-    tags: string[];
     skills: string[];
     metadata: Json;
     embedding: number[] | null; // vector(1536)

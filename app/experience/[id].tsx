@@ -96,7 +96,7 @@ export default function ExperienceDetailScreen() {
                     is_current: data.is_current,
                     description: data.description ?? '',
                     skills: data.skills.join(', '),
-                    cefr_level: data.type === 'language_cert' ? (data.tags[0] ?? '') : '',
+                    cefr_level: data.type === 'language_cert' ? ((data.metadata as any)?.cefr_level ?? '') : '',
                 });
             } catch (e) {
                 setFetchError((e as Error).message);
@@ -121,8 +121,7 @@ export default function ExperienceDetailScreen() {
                     is_current: false,
                     description: values.description || null,
                     skills: [],
-                    tags: values.cefr_level ? [values.cefr_level] : [],
-                    metadata: { proficiency: CEFR_PROFICIENCY[values.cefr_level ?? ''] ?? 0 },
+                    metadata: { proficiency: CEFR_PROFICIENCY[values.cefr_level ?? ''] ?? 0, cefr_level: values.cefr_level ?? null },
                 });
             } else {
                 updated = await update(id, {
@@ -137,7 +136,6 @@ export default function ExperienceDetailScreen() {
                     skills: values.skills
                         ? values.skills.split(',').map((s) => s.trim()).filter(Boolean)
                         : [],
-                    tags: [],
                 });
             }
             setExp(updated);
@@ -195,7 +193,7 @@ export default function ExperienceDetailScreen() {
     // ── View mode ───────────────────────────────────────────────────────────────
 
     if (!isEditMode) {
-        const cefrTag = exp.type === 'language_cert' ? exp.tags[0] : null;
+        const cefrTag = exp.type === 'language_cert' ? ((exp.metadata as any)?.cefr_level ?? null) : null;
 
         return (
             <View style={styles.flex}>

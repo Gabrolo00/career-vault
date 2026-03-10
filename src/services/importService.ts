@@ -98,7 +98,6 @@ export async function importCVFromPDF(
         end_date: e.end_date,
         is_current: e.is_current,
         description: e.description,
-        tags: e.tags,
         skills: e.skills,
         metadata: {},
     }));
@@ -115,9 +114,8 @@ export async function importCVFromPDF(
         end_date: null,
         is_current: true,
         description: null,
-        tags: [l.level],
         skills: [],
-        metadata: { proficiency: CEFR_PROFICIENCY[l.level] ?? l.proficiency ?? 50 },
+        metadata: { proficiency: CEFR_PROFICIENCY[l.level] ?? l.proficiency ?? 50, cefr_level: l.level },
     }));
 
     const allRows = [...experienceRows, ...languageRows];

@@ -36,8 +36,7 @@ export interface N8nExperienceItem {
     period: string;
     /** AI-reworked description highlighting relevance to the JD */
     description: string;
-    /** Relevant skill tags for this JD */
-    tags: string[];
+    skills: string[];
 }
 
 // ─── Project entry ──────────────────────────────────────────────────────────
@@ -50,8 +49,7 @@ export interface N8nProjectItem {
     period: string;
     /** AI-reworked description highlighting relevance to the JD */
     description: string;
-    /** Tech-stack and skill tags relevant to this JD */
-    tags: string[];
+    skills: string[];
 }
 
 // ─── Language entry ───────────────────────────────────────────────────────────

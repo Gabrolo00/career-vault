@@ -89,7 +89,7 @@ function buildEntryHtml(item: N8nExperienceItem, templateId: TemplateId): string
   const desc = esc(item.description);
 
   if (templateId === 'modern') {
-    const tags = (item.tags ?? [])
+    const skills = (item.skills ?? [])
       .map((t) => `<span class="entry-tag">${esc(t)}</span>`)
       .join('');
     return `<div class="entry">
@@ -101,7 +101,7 @@ function buildEntryHtml(item: N8nExperienceItem, templateId: TemplateId): string
     <div class="entry-meta">${period}${org ? ` · ${org}` : ''}</div>
     <div class="entry-title">${title}</div>
     <div class="entry-desc">${desc}</div>
-    ${tags ? `<div class="entry-tags">${tags}</div>` : ''}
+    ${skills ? `<div class="entry-tags">${skills}</div>` : ''}
   </div>
 </div>`;
   }
@@ -118,7 +118,7 @@ function buildEntryHtml(item: N8nExperienceItem, templateId: TemplateId): string
   }
 
   if (templateId === 'creative') {
-    const tags = (item.tags ?? [])
+    const skills = (item.skills ?? [])
       .map((t) => `<span class="entry-card-tag">${esc(t)}</span>`)
       .join('');
     return `<div class="entry-card">
@@ -128,7 +128,7 @@ function buildEntryHtml(item: N8nExperienceItem, templateId: TemplateId): string
   </div>
   ${org ? `<div class="entry-card-org">${org}</div>` : ''}
   <div class="entry-card-desc">${desc}</div>
-  ${tags ? `<div class="entry-card-tags">${tags}</div>` : ''}
+  ${skills ? `<div class="entry-card-tags">${skills}</div>` : ''}
 </div>`;
   }
 

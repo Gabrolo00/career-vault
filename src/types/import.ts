@@ -22,7 +22,6 @@ export interface ImportedExperience {
     end_date: string | null;
     is_current: boolean;
     description: string | null;
-    tags: string[];
     skills: string[];
 }
 

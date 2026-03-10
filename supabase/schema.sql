@@ -115,7 +115,6 @@ create table public.experiences (
   end_date date,
   is_current boolean default false,
   description text,
-  tags text[] default '{}',
   skills text[] default '{}',
   metadata jsonb default '{}',
   embedding vector(1536),  -- OpenAI ada-002 embeddings
