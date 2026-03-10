@@ -30,6 +30,17 @@ interface AuthContextValue extends AuthState {
     resendConfirmation: (email: string) => Promise<{ error: string | null }>;
 }
 
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+/**
+ * Where Supabase redirects after email confirmation.
+ * In production: the hosted landing page (e.g. https://careervault.netlify.app)
+ * which then opens the app via deep link careervault://?code=XXX.
+ * In dev (env var not set): falls back to the deep link directly (mobile only).
+ */
+const EMAIL_REDIRECT_URL =
+    process.env.EXPO_PUBLIC_EMAIL_CONFIRM_URL || 'careervault://';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Returns true if the session belongs to a user that confirmed their email. */
@@ -82,23 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signUp = useCallback(
         async (email: string, password: string, fullName: string) => {
-            // Check if profile exists first (Supabase often hides duplicate email errors for security)
-            const { data: existingUser } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', email)
-                .maybeSingle();
-
-            if (existingUser) {
-                return { error: 'User already registered' };
-            }
-
             const { error, data } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: { full_name: fullName },
-                    emailRedirectTo: 'careervault://',
+                    emailRedirectTo: EMAIL_REDIRECT_URL,
                 },
             });
 
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.resend({
             type: 'signup',
             email,
-            options: { emailRedirectTo: 'careervault://' },
+            options: { emailRedirectTo: EMAIL_REDIRECT_URL },
         });
         return { error: error?.message ?? null };
     }, []);
