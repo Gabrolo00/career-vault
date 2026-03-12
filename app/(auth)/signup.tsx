@@ -23,7 +23,11 @@ import { colors, radius, spacing } from '../../src/theme';
 const schema = z.object({
     fullName: z.string().min(2, 'Inserisci il tuo nome completo'),
     email: z.string().email('Email non valida'),
-    password: z.string().min(6, 'Minimo 6 caratteri'),
+    password: z.string()
+        .min(8, 'Minimo 8 caratteri')
+        .regex(/[A-Z]/, 'Deve contenere almeno una lettera maiuscola')
+        .regex(/[0-9]/, 'Deve contenere almeno un numero')
+        .regex(/[^A-Za-z0-9]/, 'Deve contenere almeno un simbolo (es. !@#$%)'),
     confirmPassword: z.string(),
 }).refine((d) => d.password === d.confirmPassword, {
     message: 'Le password non coincidono',
@@ -210,14 +214,18 @@ export default function SignupScreen() {
 
 // ─── Reusable field ───────────────────────────────────────────────────────────
 
-function AuthField({ label, icon, control, name, error, ...inputProps }: {
+function AuthField({ label, icon, control, name, error, secureTextEntry, ...inputProps }: {
     label: string;
     icon: string;
     control: any;
     name: any;
     error?: string;
+    secureTextEntry?: boolean;
     [key: string]: any;
 }) {
+    const [hidden, setHidden] = useState(true);
+    const isPassword = !!secureTextEntry;
+
     return (
         <View style={styles.field}>
             <Text style={styles.fieldLabel}>{label}</Text>
@@ -233,8 +241,18 @@ function AuthField({ label, icon, control, name, error, ...inputProps }: {
                             value={value}
                             onChangeText={onChange}
                             onBlur={onBlur}
+                            secureTextEntry={isPassword ? hidden : false}
                             {...inputProps}
                         />
+                        {isPassword && (
+                            <Pressable onPress={() => setHidden(h => !h)} hitSlop={8}>
+                                <Ionicons
+                                    name={hidden ? 'eye-outline' : 'eye-off-outline'}
+                                    size={18}
+                                    color={colors.textMuted}
+                                />
+                            </Pressable>
+                        )}
                     </View>
                 )}
             />

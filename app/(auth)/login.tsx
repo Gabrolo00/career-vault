@@ -196,14 +196,18 @@ export default function LoginScreen() {
 
 // ─── Reusable field ───────────────────────────────────────────────────────────
 
-function AuthField({ label, icon, control, name, error, ...inputProps }: {
+function AuthField({ label, icon, control, name, error, secureTextEntry, ...inputProps }: {
     label: string;
     icon: string;
     control: any;
     name: any;
     error?: string;
+    secureTextEntry?: boolean;
     [key: string]: any;
 }) {
+    const [hidden, setHidden] = useState(true);
+    const isPassword = !!secureTextEntry;
+
     return (
         <View style={styles.field}>
             <Text style={styles.fieldLabel}>{label}</Text>
@@ -219,8 +223,18 @@ function AuthField({ label, icon, control, name, error, ...inputProps }: {
                             value={value}
                             onChangeText={onChange}
                             onBlur={onBlur}
+                            secureTextEntry={isPassword ? hidden : false}
                             {...inputProps}
                         />
+                        {isPassword && (
+                            <Pressable onPress={() => setHidden(h => !h)} hitSlop={8}>
+                                <Ionicons
+                                    name={hidden ? 'eye-outline' : 'eye-off-outline'}
+                                    size={18}
+                                    color={colors.textMuted}
+                                />
+                            </Pressable>
+                        )}
                     </View>
                 )}
             />
