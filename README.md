@@ -138,3 +138,11 @@ Il workflow n8n deve:
 ## 📄 Licenza
 
 MIT
+
+---
+
+Email confirmation:
+  Per riattivare tutto in futuro basta:
+  1. REQUIRE_EMAIL_CONFIRMATION = true in AuthContext.tsx e _layout.tsx                                                        
+  2. Riattivare il toggle in Supabase dashboard
+                                                           
