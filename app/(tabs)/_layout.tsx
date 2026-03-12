@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
     Platform,
     Pressable,
@@ -6,10 +6,11 @@ import {
     Text,
     View,
 } from 'react-native';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors, TAB_BAR_HEIGHT, TAB_BAR_BOTTOM } from '../../src/theme';
+import { getProfile } from '../../src/services/profileService';
 
 // ─── Floating Pill Tab Bar ────────────────────────────────────────────────────
 
@@ -61,7 +62,27 @@ function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
+// ─── Onboarding Guard ─────────────────────────────────────────────────────────
+
+function useOnboardingGuard() {
+    const router = useRouter();
+    const checked = useRef(false);
+
+    useEffect(() => {
+        if (checked.current) return;
+        checked.current = true;
+        getProfile().then((profile) => {
+            if (!profile?.onboarding_completed) {
+                router.replace('/onboarding');
+            }
+        }).catch(() => {
+            // On error stay in tabs — avoid boot loop
+        });
+    }, []);
+}
+
 export default function TabsLayout() {
+    useOnboardingGuard();
     return (
         <Tabs
             tabBar={(props) => <FloatingTabBar {...props} />}

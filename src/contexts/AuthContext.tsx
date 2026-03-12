@@ -33,6 +33,16 @@ interface AuthContextValue extends AuthState {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 /**
+ * Set to true to require email confirmation before login.
+ * When true: users must confirm via email → Netlify page → deep link.
+ * When false: users can log in immediately after registration.
+ *
+ * Remember to also toggle "Enable email confirmations" in:
+ * Supabase Dashboard → Authentication → Email → Enable email confirmations
+ */
+const REQUIRE_EMAIL_CONFIRMATION = false;
+
+/**
  * Where Supabase redirects after email confirmation.
  * In production: the hosted landing page (e.g. https://careervault.netlify.app)
  * which then opens the app via deep link careervault://?code=XXX.
@@ -61,10 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Restore session on mount — reject unconfirmed email sessions
+        // Restore session on mount
         supabase.auth.getSession().then(({ data }) => {
             const s = data.session;
-            if (s && !isEmailConfirmed(s)) {
+            if (REQUIRE_EMAIL_CONFIRMATION && s && !isEmailConfirmed(s)) {
                 supabase.auth.signOut();
                 setLoading(false);
                 return;
@@ -74,10 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
         });
 
-        // Listen for auth changes — same guard
+        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (_event, newSession) => {
-                if (newSession && !isEmailConfirmed(newSession)) {
+                if (REQUIRE_EMAIL_CONFIRMATION && newSession && !isEmailConfirmed(newSession)) {
                     supabase.auth.signOut();
                     setLoading(false);
                     return;

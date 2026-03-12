@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useDocuments } from '../../src/hooks/useDocuments';
+import { useProfile } from '../../src/hooks/useProfile';
 import { DocumentType, GeneratedDocument } from '../../src/types/database';
 import { colors, radius, spacing, typography, STATUS_ICONS, DOC_TYPE_ICONS, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 
@@ -72,6 +73,7 @@ const CV_TEMPLATES: TemplateOption[] = [
 export default function GenerateScreen() {
     const router = useRouter();
     const { generate } = useDocuments();
+    const { profile } = useProfile();
 
     const [docType, setDocType] = useState<DocumentType>('cv');
     const [docTitle, setDocTitle] = useState('');
@@ -81,7 +83,8 @@ export default function GenerateScreen() {
     const [result, setResult] = useState<GeneratedDocument | null>(null);
     const [genError, setGenError] = useState<string | null>(null);
 
-    const canGenerate = jdText.trim().length > 30 && docTitle.trim().length > 0 && !generating;
+    const profileComplete = !!(profile?.full_name?.trim());
+    const canGenerate = profileComplete && jdText.trim().length > 30 && docTitle.trim().length > 0 && !generating;
 
     const handleGenerate = async () => {
         try {
@@ -112,6 +115,23 @@ export default function GenerateScreen() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
+                {/* Profile incomplete banner */}
+                {!profileComplete && (
+                    <Pressable
+                        style={styles.profileBanner}
+                        onPress={() => router.push('/onboarding' as any)}
+                    >
+                        <Ionicons name="person-circle-outline" size={20} color={colors.warning} />
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.profileBannerTitle}>Profilo incompleto</Text>
+                            <Text style={styles.profileBannerBody}>
+                                Completa il tuo profilo per sbloccare la generazione documenti.
+                            </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={16} color={colors.warning} />
+                    </Pressable>
+                )}
+
                 {/* Title input */}
                 <View style={styles.jdSection}>
                     <Text style={styles.sectionLabel}>Nome del documento</Text>
@@ -554,6 +574,29 @@ const styles = StyleSheet.create({
     },
     processingText: { flex: 1, fontSize: 13, color: colors.warning },
     failedText: { fontSize: 13, color: colors.error },
+
+    // Profile banner
+    profileBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.warningBg,
+        borderWidth: 1,
+        borderColor: colors.warning + '44',
+        borderRadius: radius.lg,
+        padding: spacing.md,
+    },
+    profileBannerTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: colors.warning,
+    },
+    profileBannerBody: {
+        fontSize: 12,
+        color: colors.textMuted,
+        lineHeight: 16,
+        marginTop: 2,
+    },
 
     // Tip
     tipCard: {

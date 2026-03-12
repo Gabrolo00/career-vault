@@ -44,6 +44,7 @@ export interface Profile {
     native_language: string | null;
     /** Array of languages with level and proficiency, stored as JSONB */
     languages: LanguageEntry[] | null;
+    onboarding_completed: boolean;
     created_at: string;
     updated_at: string;
 }

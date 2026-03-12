@@ -21,6 +21,7 @@ create table public.profiles (
   -- v3 fields
   native_language text,
   languages jsonb default '[]',
+  onboarding_completed boolean default false,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
