@@ -21,6 +21,58 @@ import {
 } from '../../src/types/generation';
 import { TemplateId } from '../(tabs)/generate';
 import { colors, radius, spacing, typography } from '../../src/theme';
+import { DatePickerField } from '../../src/components/DatePickerField';
+
+// ─── Period helpers ───────────────────────────────────────────────────────────
+
+const IT_MONTHS = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+const IT_MONTH_MAP: Record<string, number> = {
+    gen: 0, feb: 1, mar: 2, apr: 3, mag: 4, giu: 5,
+    lug: 6, ago: 7, set: 8, ott: 9, nov: 10, dic: 11,
+};
+
+function formatDateIT(dateStr: string): string {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T12:00:00');
+    return `${IT_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function buildPeriod(start: string, end: string, isCurrent: boolean): string {
+    const s = formatDateIT(start);
+    const e = isCurrent ? 'Presente' : formatDateIT(end);
+    if (s && e) return `${s} – ${e}`;
+    if (s) return s;
+    if (e) return e;
+    return '';
+}
+
+/** Best-effort parse of "Gen 2022 – Presente" or "Gen 2022 – Mar 2024" */
+function parsePeriod(period: string): { start: string; end: string; isCurrent: boolean } {
+    const sep = period.includes('–') ? '–' : '–';
+    const [rawStart = '', rawEnd = ''] = period.split(sep).map(p => p.trim());
+
+    const parseDate = (s: string): string => {
+        const parts = s.toLowerCase().split(' ');
+        if (parts.length === 2) {
+            const month = IT_MONTH_MAP[parts[0]];
+            const year = parseInt(parts[1], 10);
+            if (month !== undefined && !isNaN(year))
+                return `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        }
+        if (parts.length === 1) {
+            const year = parseInt(parts[0], 10);
+            if (!isNaN(year)) return `${year}-01-01`;
+        }
+        return '';
+    };
+
+    const isCurrent = /present|attual|corrente|ongoing/i.test(rawEnd);
+    return {
+        start: parseDate(rawStart),
+        end: isCurrent ? '' : parseDate(rawEnd),
+        isCurrent,
+    };
+}
 
 // ─── Section types ────────────────────────────────────────────────────────────
 
@@ -147,6 +199,26 @@ interface ExperienceItemCardProps {
 }
 
 function ExperienceItemCard({ item, index, isExpanded, onToggle, onDelete, onChange }: ExperienceItemCardProps) {
+    // Local date state — initialised once from the period string
+    const parsed = React.useMemo(() => parsePeriod(item.period ?? ''), []);
+    const [startDate, setStartDate] = useState(parsed.start);
+    const [endDate, setEndDate] = useState(parsed.end);
+    const [isCurrent, setIsCurrent] = useState(parsed.isCurrent);
+
+    const handleStartChange = (date: string) => {
+        setStartDate(date);
+        onChange('period', buildPeriod(date, endDate, isCurrent));
+    };
+    const handleEndChange = (date: string) => {
+        setEndDate(date);
+        onChange('period', buildPeriod(startDate, date, isCurrent));
+    };
+    const handleCurrentToggle = () => {
+        const next = !isCurrent;
+        setIsCurrent(next);
+        onChange('period', buildPeriod(startDate, endDate, next));
+    };
+
     return (
         <View style={itemStyles.card}>
             <Pressable onPress={onToggle} style={itemStyles.header}>
@@ -169,11 +241,27 @@ function ExperienceItemCard({ item, index, isExpanded, onToggle, onDelete, onCha
                 <View style={itemStyles.body}>
                     <FieldInput label="Titolo" value={item.title} onChangeText={v => onChange('title', v)} />
                     <FieldInput label="Organizzazione" value={item.organization} onChangeText={v => onChange('organization', v)} />
-                    <FieldInput label="Periodo" value={item.period} onChangeText={v => onChange('period', v)} />
+
+                    {/* Period — two date pickers + "Attualmente" toggle */}
+                    <View style={itemStyles.periodRow}>
+                        <View style={itemStyles.periodField}>
+                            <DatePickerField label="Inizio" value={startDate} onChange={handleStartChange} />
+                        </View>
+                        <View style={itemStyles.periodField}>
+                            <DatePickerField label="Fine" value={endDate} onChange={handleEndChange} disabled={isCurrent} />
+                        </View>
+                    </View>
+                    <Pressable onPress={handleCurrentToggle} style={itemStyles.currentRow}>
+                        <View style={[itemStyles.checkbox, isCurrent && itemStyles.checkboxActive]}>
+                            {isCurrent && <Ionicons name="checkmark" size={12} color="#fff" />}
+                        </View>
+                        <Text style={itemStyles.currentLabel}>Attualmente in corso</Text>
+                    </Pressable>
+
                     <FieldInput label="Descrizione" value={item.description} onChangeText={v => onChange('description', v)} multiline />
                     <FieldInput
                         label="Competenze (separate da virgola)"
-                        value={item.skills.join(', ')}
+                        value={(item.skills ?? []).join(', ')}
                         onChangeText={v => onChange('skills', v)}
                         placeholder="React, TypeScript, Node.js"
                     />
@@ -207,6 +295,31 @@ const itemStyles = StyleSheet.create({
         borderTopColor: colors.border,
         padding: spacing.md,
     },
+    periodRow: {
+        flexDirection: 'row',
+        gap: spacing.sm,
+        marginBottom: spacing.sm,
+    },
+    periodField: { flex: 1 },
+    currentRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+    },
+    checkbox: {
+        width: 20, height: 20,
+        borderRadius: 4,
+        borderWidth: 1.5,
+        borderColor: colors.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    checkboxActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    currentLabel: { fontSize: 13, color: colors.textSecondary },
 });
 
 // ─── LanguageItemCard ─────────────────────────────────────────────────────────
@@ -401,7 +514,7 @@ function SectionCard({
                     <View style={sectionStyles.body}>
                         <FieldInput
                             label="Competenze (separate da virgola)"
-                            value={content.skills.join(', ')}
+                            value={(content.skills ?? []).join(', ')}
                             onChangeText={v =>
                                 onUpdateContent(prev => ({
                                     ...prev,
@@ -418,7 +531,7 @@ function SectionCard({
             case 'education':
             case 'certifications': {
                 const listKey = sectionKey as 'experiences' | 'projects' | 'education' | 'certifications';
-                const items = content[listKey] as (N8nExperienceItem | N8nProjectItem)[];
+                const items = ((content[listKey] ?? []) as (N8nExperienceItem | N8nProjectItem)[]);
                 return (
                     <View style={sectionStyles.body}>
                         {items.map((item, idx) => (
@@ -443,7 +556,7 @@ function SectionCard({
             case 'languages':
                 return (
                     <View style={sectionStyles.body}>
-                        {content.languages.map((lang, idx) => (
+                        {(content.languages ?? []).map((lang, idx) => (
                             <LanguageItemCard
                                 key={idx}
                                 item={lang}
