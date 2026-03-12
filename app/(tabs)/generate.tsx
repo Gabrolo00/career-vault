@@ -157,10 +157,12 @@ export default function GenerateScreen() {
     const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile();
     const { experiences, loading: expLoading, refresh: refreshExperiences } = useExperiences();
 
-    // Refresh both on every focus so the check uses live DB data
+    // Refresh both on every focus so the check uses live DB data (sequential to avoid race)
     useFocusEffect(useCallback(() => {
-        refreshProfile();
-        refreshExperiences();
+        (async () => {
+            await refreshProfile();
+            await refreshExperiences();
+        })();
     }, []));
 
     const [docType, setDocType] = useState<DocumentType>('cv');

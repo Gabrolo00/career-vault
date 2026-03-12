@@ -25,7 +25,7 @@ import { ImportSummary } from '../../src/types/import';
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ProfileScreen() {
-    const { user, signOut } = useAuth();
+    const { user, signOut, deleteAccount } = useAuth();
     const { profile, loading, saving, error, refresh, save, changeAvatar } = useProfile();
 
     const [fullName, setFullName] = useState('');
@@ -136,6 +136,39 @@ export default function ProfileScreen() {
             { text: 'Annulla', style: 'cancel' },
             { text: 'Esci', style: 'destructive', onPress: signOut },
         ]);
+    };
+
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            'Elimina account',
+            'Questa azione è irreversibile. Tutti i tuoi dati, esperienze e documenti generati verranno eliminati definitivamente.',
+            [
+                { text: 'Annulla', style: 'cancel' },
+                {
+                    text: 'Elimina',
+                    style: 'destructive',
+                    onPress: () => {
+                        Alert.alert(
+                            'Sei sicuro?',
+                            `Stai per eliminare l'account associato a ${user?.email}. Non sarà possibile recuperarlo.`,
+                            [
+                                { text: 'Annulla', style: 'cancel' },
+                                {
+                                    text: 'Sì, elimina definitivamente',
+                                    style: 'destructive',
+                                    onPress: async () => {
+                                        const { error } = await deleteAccount();
+                                        if (error) {
+                                            Alert.alert('Errore', `Impossibile eliminare l'account: ${error}`);
+                                        }
+                                    },
+                                },
+                            ]
+                        );
+                    },
+                },
+            ]
+        );
     };
 
     if (loading) {
@@ -287,6 +320,12 @@ export default function ProfileScreen() {
                 <Pressable style={styles.signOutBtn} onPress={handleSignOut}>
                     <Ionicons name="log-out-outline" size={18} color={colors.error} />
                     <Text style={styles.signOutText}>Disconnetti</Text>
+                </Pressable>
+
+                {/* Delete account */}
+                <Pressable style={styles.deleteAccountBtn} onPress={handleDeleteAccount}>
+                    <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                    <Text style={styles.deleteAccountText}>Elimina account</Text>
                 </Pressable>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -618,4 +657,18 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
     },
     signOutText: { color: colors.error, fontWeight: '700', fontSize: 15 },
+
+    // Delete account — subtle ghost button
+    deleteAccountBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 10,
+        marginTop: -4,
+    },
+    deleteAccountText: {
+        fontSize: 13,
+        color: colors.textMuted,
+    },
 });

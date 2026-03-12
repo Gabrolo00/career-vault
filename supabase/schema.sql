@@ -58,6 +58,21 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
+-- Delete current user's account (called from client via supabase.rpc)
+-- SECURITY DEFINER runs as function owner (postgres) which can delete from auth.users
+create or replace function public.delete_user_account()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from auth.users where id = auth.uid();
+end;
+$$;
+
+grant execute on function public.delete_user_account() to authenticated;
+
 -- ============================================================
 -- Storage — avatars bucket
 -- ============================================================

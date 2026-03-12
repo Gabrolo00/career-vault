@@ -27,6 +27,7 @@ interface AuthContextValue extends AuthState {
         password: string
     ) => Promise<{ error: string | null }>;
     signOut: () => Promise<void>;
+    deleteAccount: () => Promise<{ error: string | null }>;
     resendConfirmation: (email: string) => Promise<{ error: string | null }>;
 }
 
@@ -133,6 +134,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.auth.signOut();
     }, []);
 
+    const deleteAccount = useCallback(async () => {
+        const { error } = await supabase.rpc('delete_user_account');
+        if (error) return { error: error.message };
+        await supabase.auth.signOut();
+        return { error: null };
+    }, []);
+
     const resendConfirmation = useCallback(async (email: string) => {
         const { error } = await supabase.auth.resend({
             type: 'signup',
@@ -144,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider
-            value={{ session, user, loading, signUp, signIn, signOut, resendConfirmation }}
+            value={{ session, user, loading, signUp, signIn, signOut, deleteAccount, resendConfirmation }}
         >
             {children}
         </AuthContext.Provider>

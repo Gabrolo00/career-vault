@@ -21,6 +21,7 @@ export async function getDocumentById(id: string): Promise<GeneratedDocument> {
         .single();
 
     if (error) throw new Error(error.message);
+    if (!data) throw new Error('Documento non trovato');
     return data as GeneratedDocument;
 }
 

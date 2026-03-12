@@ -42,10 +42,14 @@ export default function DocumentViewerScreen() {
 
                 if (data?.status === 'completed' && data.generated_content) {
                     // Render HTML locally from stored JSON + template
-                    const generationResult = data.generated_content as unknown as N8nGenerationResult;
-                    const templateId = (data.template_id ?? 'modern') as TemplateId;
-                    const html = renderCvHtml(generationResult, templateId);
-                    setHtmlContent(html);
+                    try {
+                        const generationResult = data.generated_content as unknown as N8nGenerationResult;
+                        const templateId = (data.template_id ?? 'modern') as TemplateId;
+                        const html = renderCvHtml(generationResult, templateId);
+                        setHtmlContent(html);
+                    } catch (renderErr) {
+                        setError(`Errore nel rendering del documento: ${(renderErr as Error).message}`);
+                    }
                 }
             } catch (e) {
                 setError((e as Error).message);
@@ -66,7 +70,7 @@ export default function DocumentViewerScreen() {
             setPreviewing(true);
             await Print.printAsync({ html: htmlContent });
         } catch {
-            console.log('Preview closed');
+            // Preview closed by user — not an error
         } finally {
             setPreviewing(false);
         }

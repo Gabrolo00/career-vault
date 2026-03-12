@@ -51,15 +51,29 @@ export async function triggerGeneration(
         );
     }
 
-    const response = await fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'x-internal-secret': WEBHOOK_SECRET,
-        },
-        body: JSON.stringify(payload),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
+    let response: Response;
+    try {
+        response = await fetch(WEBHOOK_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'x-internal-secret': WEBHOOK_SECRET,
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal,
+        });
+    } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') {
+            throw new Error('Il webhook n8n non ha risposto entro 60 secondi. Riprova più tardi.');
+        }
+        throw e;
+    } finally {
+        clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
         const text = await response.text().catch(() => 'Nessun body');
