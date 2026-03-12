@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -10,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getDocumentById } from '../../src/services/documentService';
@@ -31,8 +31,10 @@ export default function DocumentViewerScreen() {
     const [exporting, setExporting] = useState(false);
     const [previewing, setPreviewing] = useState(false);
 
-    useEffect(() => {
+    useFocusEffect(useCallback(() => {
         if (!id) return;
+        setLoading(true);
+        setError(null);
         (async () => {
             try {
                 const data = await getDocumentById(id);
@@ -51,7 +53,7 @@ export default function DocumentViewerScreen() {
                 setLoading(false);
             }
         })();
-    }, [id]);
+    }, [id]));
 
     // ── Preview (native render via Print) ───────────────────────────────────────
 
@@ -182,6 +184,18 @@ export default function DocumentViewerScreen() {
 
             {/* Action buttons */}
             <View style={styles.actions}>
+                {doc.status === 'completed' && doc.generated_content && (
+                    <Pressable
+                        style={styles.btnSecondary}
+                        onPress={() => router.push(`/document/editor?id=${id}` as any)}
+                    >
+                        <View style={styles.btnInner}>
+                            <Ionicons name="create-outline" size={18} color={colors.primary} />
+                            <Text style={styles.btnSecondaryText}>Modifica CV</Text>
+                        </View>
+                    </Pressable>
+                )}
+
                 <Pressable
                     style={[styles.btnPrimary, (!htmlContent || previewing) && styles.btnDisabled]}
                     onPress={handlePreview}
