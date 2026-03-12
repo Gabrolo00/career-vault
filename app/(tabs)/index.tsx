@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     FlatList,
     Pressable,
     RefreshControl,
@@ -12,9 +13,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useExperiences } from '../../src/hooks/useExperiences';
 import { ExperienceCard } from '../../src/components/ExperienceCard';
+import { importCVFromPDF } from '../../src/services/importService';
 import { colors, radius, spacing, TYPE_META, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 import { ExperienceType } from '../../src/types/database';
 
@@ -30,6 +33,8 @@ const TYPE_FILTERS: { value: FilterValue; label: string; iconName: string }[] = 
     })),
 ];
 
+type ImportState = 'idle' | 'loading' | 'success' | 'error';
+
 export default function VaultScreen() {
     const router = useRouter();
     const { user } = useAuth();
@@ -37,6 +42,30 @@ export default function VaultScreen() {
 
     const [activeFilter, setActiveFilter] = useState<FilterValue>(ALL_FILTER);
     const [searchQuery, setSearchQuery] = useState('');
+    const [importState, setImportState] = useState<ImportState>('idle');
+
+    const handleMagicImport = async () => {
+        if (!user) return;
+        const result = await DocumentPicker.getDocumentAsync({
+            type: 'application/pdf',
+            copyToCacheDirectory: true,
+        });
+        if (result.canceled) return;
+
+        const asset = result.assets[0];
+        setImportState('loading');
+        try {
+            await importCVFromPDF(asset.uri, asset.name ?? 'cv.pdf', user.id);
+            setImportState('success');
+            await refresh();
+            Alert.alert('Importazione completata', 'Le esperienze dal CV sono state aggiunte al vault.');
+        } catch (e) {
+            setImportState('error');
+            Alert.alert('Errore importazione', (e as Error).message);
+        } finally {
+            setImportState('idle');
+        }
+    };
 
     const filtered = experiences.filter((e) => {
         const matchType = activeFilter === ALL_FILTER || e.type === activeFilter;
@@ -148,22 +177,42 @@ export default function VaultScreen() {
                     ListEmptyComponent={
                         <View style={styles.empty}>
                             <Ionicons
-                                name={searchQuery || activeFilter !== ALL_FILTER ? 'search-outline' : 'file-tray-outline'}
+                                name={searchQuery || activeFilter !== ALL_FILTER ? 'search-outline' : 'server-outline'}
                                 size={48}
                                 color={colors.textMuted}
                             />
                             <Text style={styles.emptyTitle}>
-                                {searchQuery || activeFilter !== ALL_FILTER ? 'Nessun risultato' : 'Il tuo Vault è vuoto'}
+                                {searchQuery || activeFilter !== ALL_FILTER ? 'Nessun risultato' : 'Il Vault è vuoto'}
                             </Text>
                             <Text style={styles.emptyBody}>
                                 {searchQuery || activeFilter !== ALL_FILTER
-                                    ? 'Prova a cambiare filtri o ricerca'
-                                    : 'Aggiungi la tua prima esperienza!'}
+                                    ? 'Prova a cambiare filtri o termini di ricerca'
+                                    : 'Importa un CV esistente o aggiungi manualmente la tua prima esperienza.'}
                             </Text>
                             {!searchQuery && activeFilter === ALL_FILTER && (
-                                <Pressable style={styles.addBtnLarge} onPress={() => router.push('/experience/new')}>
-                                    <Text style={styles.addBtnLargeText}>+ Aggiungi esperienza</Text>
-                                </Pressable>
+                                <View style={styles.emptyActions}>
+                                    <Pressable
+                                        style={styles.emptyImportBtn}
+                                        onPress={handleMagicImport}
+                                        disabled={importState === 'loading'}
+                                    >
+                                        {importState === 'loading' ? (
+                                            <ActivityIndicator size="small" color="#fff" />
+                                        ) : (
+                                            <>
+                                                <Ionicons name="cloud-upload-outline" size={16} color="#fff" />
+                                                <Text style={styles.emptyImportBtnText}>Importa CV esistente</Text>
+                                            </>
+                                        )}
+                                    </Pressable>
+                                    <Pressable
+                                        style={styles.emptyAddBtn}
+                                        onPress={() => router.push('/experience/new')}
+                                    >
+                                        <Ionicons name="add" size={16} color={colors.primary} />
+                                        <Text style={styles.emptyAddBtnText}>Aggiungi esperienza</Text>
+                                    </Pressable>
+                                </View>
                             )}
                         </View>
                     }
@@ -306,12 +355,30 @@ const styles = StyleSheet.create({
     retryBtn: { backgroundColor: colors.bgCard, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
     retryText: { color: colors.primary, fontWeight: '700' },
 
-    empty: { alignItems: 'center', paddingTop: 60, gap: spacing.sm },
+    empty: { alignItems: 'center', paddingTop: 60, gap: spacing.sm, paddingHorizontal: spacing.lg },
     emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
-    emptyBody: { fontSize: 14, color: colors.textMuted, textAlign: 'center', maxWidth: 260 },
-    addBtnLarge: {
-        backgroundColor: colors.primary, borderRadius: radius.full,
-        paddingHorizontal: spacing.xl, paddingVertical: 12, marginTop: spacing.sm,
+    emptyBody: { fontSize: 14, color: colors.textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 20 },
+    emptyActions: { gap: spacing.sm, width: '100%', marginTop: spacing.sm },
+    emptyImportBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.primary,
+        borderRadius: radius.lg,
+        paddingVertical: 14,
     },
-    addBtnLargeText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    emptyImportBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    emptyAddBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.bgCard,
+        borderRadius: radius.lg,
+        paddingVertical: 14,
+        borderWidth: 1.5,
+        borderColor: colors.primary,
+    },
+    emptyAddBtnText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
 });

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
+    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -9,9 +10,10 @@ import {
     View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useDocuments } from '../../src/hooks/useDocuments';
 import { useProfile } from '../../src/hooks/useProfile';
+import { useExperiences } from '../../src/hooks/useExperiences';
 import { DocumentType, GeneratedDocument } from '../../src/types/database';
 import { colors, radius, spacing, typography, STATUS_ICONS, DOC_TYPE_ICONS, SCREEN_PADDING_BOTTOM } from '../../src/theme';
 
@@ -70,10 +72,96 @@ const CV_TEMPLATES: TemplateOption[] = [
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
+// ─── Readiness modal ──────────────────────────────────────────────────────────
+
+type ReadinessIssue = 'profile' | 'vault' | 'both';
+
+function ReadinessModal({
+    visible,
+    issue,
+    onGoProfile,
+    onGoVault,
+    onDismiss,
+}: {
+    visible: boolean;
+    issue: ReadinessIssue;
+    onGoProfile: () => void;
+    onGoVault: () => void;
+    onDismiss: () => void;
+}) {
+    const showProfile = issue === 'profile' || issue === 'both';
+    const showVault = issue === 'vault' || issue === 'both';
+
+    return (
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
+            <Pressable style={modalStyles.overlay} onPress={onDismiss}>
+                <Pressable style={modalStyles.card} onPress={() => {}}>
+                    <View style={modalStyles.iconRow}>
+                        <View style={modalStyles.iconWrap}>
+                            <Ionicons name="alert-circle-outline" size={32} color={colors.warning} />
+                        </View>
+                    </View>
+
+                    <Text style={modalStyles.title}>Profilo Incompleto</Text>
+                    <Text style={modalStyles.body}>
+                        Per permettere all'AI di generare un documento efficace, assicurati di aver:
+                    </Text>
+
+                    <View style={modalStyles.checkList}>
+                        {showProfile && (
+                            <View style={modalStyles.checkRow}>
+                                <Ionicons name="close-circle" size={16} color={colors.error} />
+                                <Text style={modalStyles.checkText}>
+                                    Compilato i tuoi dati personali nel Profilo (nome e ruolo)
+                                </Text>
+                            </View>
+                        )}
+                        {showVault && (
+                            <View style={modalStyles.checkRow}>
+                                <Ionicons name="close-circle" size={16} color={colors.error} />
+                                <Text style={modalStyles.checkText}>
+                                    Aggiunto almeno un'esperienza nel Vault
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={modalStyles.actions}>
+                        {showProfile && (
+                            <Pressable style={modalStyles.btnPrimary} onPress={onGoProfile}>
+                                <Ionicons name="person-outline" size={16} color="#fff" />
+                                <Text style={modalStyles.btnPrimaryText}>Vai al Profilo</Text>
+                            </Pressable>
+                        )}
+                        {showVault && (
+                            <Pressable style={modalStyles.btnSecondary} onPress={onGoVault}>
+                                <Ionicons name="server-outline" size={16} color={colors.primary} />
+                                <Text style={modalStyles.btnSecondaryText}>Vai al Vault</Text>
+                            </Pressable>
+                        )}
+                        <Pressable style={modalStyles.btnGhost} onPress={onDismiss}>
+                            <Text style={modalStyles.btnGhostText}>Annulla</Text>
+                        </Pressable>
+                    </View>
+                </Pressable>
+            </Pressable>
+        </Modal>
+    );
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
+
 export default function GenerateScreen() {
     const router = useRouter();
     const { generate } = useDocuments();
-    const { profile } = useProfile();
+    const { profile, loading: profileLoading, refresh: refreshProfile } = useProfile();
+    const { experiences, loading: expLoading, refresh: refreshExperiences } = useExperiences();
+
+    // Refresh both on every focus so the check uses live DB data
+    useFocusEffect(useCallback(() => {
+        refreshProfile();
+        refreshExperiences();
+    }, []));
 
     const [docType, setDocType] = useState<DocumentType>('cv');
     const [docTitle, setDocTitle] = useState('');
@@ -82,11 +170,23 @@ export default function GenerateScreen() {
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<GeneratedDocument | null>(null);
     const [genError, setGenError] = useState<string | null>(null);
+    const [readinessIssue, setReadinessIssue] = useState<ReadinessIssue | null>(null);
 
-    const profileComplete = !!(profile?.full_name?.trim());
-    const canGenerate = profileComplete && jdText.trim().length > 30 && docTitle.trim().length > 0 && !generating;
+    // Only check once data has loaded — avoid false negatives during mount
+    const readinessReady = !profileLoading && !expLoading;
+    const profileComplete = !!(profile?.full_name?.trim() && profile?.headline?.trim());
+    const hasExperiences = experiences.length > 0;
+    const canGenerate = jdText.trim().length > 30 && docTitle.trim().length > 0 && !generating;
 
     const handleGenerate = async () => {
+        // Pre-generation readiness check (skip if still loading)
+        if (readinessReady && (!profileComplete || !hasExperiences)) {
+            if (!profileComplete && !hasExperiences) setReadinessIssue('both');
+            else if (!profileComplete) setReadinessIssue('profile');
+            else setReadinessIssue('vault');
+            return;
+        }
+
         try {
             setGenerating(true);
             setGenError(null);
@@ -102,6 +202,17 @@ export default function GenerateScreen() {
 
     return (
         <View style={styles.container}>
+            {/* Readiness modal */}
+            {readinessIssue && (
+                <ReadinessModal
+                    visible
+                    issue={readinessIssue}
+                    onGoProfile={() => { setReadinessIssue(null); router.push('/(tabs)/profile'); }}
+                    onGoVault={() => { setReadinessIssue(null); router.push('/(tabs)'); }}
+                    onDismiss={() => setReadinessIssue(null)}
+                />
+            )}
+
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.title}>Genera documento</Text>
@@ -115,23 +226,6 @@ export default function GenerateScreen() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                {/* Profile incomplete banner */}
-                {!profileComplete && (
-                    <Pressable
-                        style={styles.profileBanner}
-                        onPress={() => router.push('/onboarding' as any)}
-                    >
-                        <Ionicons name="person-circle-outline" size={20} color={colors.warning} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.profileBannerTitle}>Profilo incompleto</Text>
-                            <Text style={styles.profileBannerBody}>
-                                Completa il tuo profilo per sbloccare la generazione documenti.
-                            </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={16} color={colors.warning} />
-                    </Pressable>
-                )}
-
                 {/* Title input */}
                 <View style={styles.jdSection}>
                     <Text style={styles.sectionLabel}>Nome del documento</Text>
@@ -251,7 +345,7 @@ export default function GenerateScreen() {
 
                 {/* Generate button */}
                 <Pressable
-                    style={[styles.genBtn, !canGenerate && styles.genBtnDisabled]}
+                    style={[styles.genBtn, (!canGenerate) && styles.genBtnDisabled]}
                     onPress={handleGenerate}
                     disabled={!canGenerate}
                 >
@@ -575,29 +669,6 @@ const styles = StyleSheet.create({
     processingText: { flex: 1, fontSize: 13, color: colors.warning },
     failedText: { fontSize: 13, color: colors.error },
 
-    // Profile banner
-    profileBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.sm,
-        backgroundColor: colors.warningBg,
-        borderWidth: 1,
-        borderColor: colors.warning + '44',
-        borderRadius: radius.lg,
-        padding: spacing.md,
-    },
-    profileBannerTitle: {
-        fontSize: 14,
-        fontWeight: '700',
-        color: colors.warning,
-    },
-    profileBannerBody: {
-        fontSize: 12,
-        color: colors.textMuted,
-        lineHeight: 16,
-        marginTop: 2,
-    },
-
     // Tip
     tipCard: {
         backgroundColor: colors.bgCard,
@@ -610,4 +681,89 @@ const styles = StyleSheet.create({
     tipTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
     tipTitle: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
     tipItem: { fontSize: 13, color: colors.textMuted, lineHeight: 20 },
+});
+
+// ─── Modal styles ─────────────────────────────────────────────────────────────
+
+const modalStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: spacing.lg,
+    },
+    card: {
+        width: '100%',
+        backgroundColor: colors.bgCard,
+        borderRadius: radius.xl,
+        padding: spacing.lg,
+        borderWidth: 1,
+        borderColor: colors.border,
+        gap: spacing.md,
+    },
+    iconRow: { alignItems: 'center' },
+    iconWrap: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: colors.warningBg,
+        borderWidth: 1,
+        borderColor: colors.warning + '40',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: colors.textPrimary,
+        textAlign: 'center',
+        letterSpacing: -0.3,
+    },
+    body: {
+        fontSize: 14,
+        color: colors.textSecondary,
+        lineHeight: 20,
+        textAlign: 'center',
+    },
+    checkList: { gap: spacing.sm },
+    checkRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: spacing.sm,
+        backgroundColor: colors.errorBg,
+        borderRadius: radius.md,
+        padding: spacing.sm,
+    },
+    checkText: {
+        flex: 1,
+        fontSize: 13,
+        color: colors.textSecondary,
+        lineHeight: 18,
+    },
+    actions: { gap: spacing.sm, marginTop: spacing.xs },
+    btnPrimary: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.primary,
+        borderRadius: radius.lg,
+        paddingVertical: 14,
+    },
+    btnPrimaryText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+    btnSecondary: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.bgCardAlt,
+        borderRadius: radius.lg,
+        paddingVertical: 14,
+        borderWidth: 1,
+        borderColor: colors.primary + '60',
+    },
+    btnSecondaryText: { color: colors.primary, fontWeight: '700', fontSize: 15 },
+    btnGhost: { alignItems: 'center', paddingVertical: 10 },
+    btnGhostText: { color: colors.textMuted, fontSize: 14 },
 });
