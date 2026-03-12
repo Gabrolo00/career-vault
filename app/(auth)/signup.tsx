@@ -18,6 +18,9 @@ import { z } from 'zod';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { colors, radius, spacing } from '../../src/theme';
 
+// Keep in sync with REQUIRE_EMAIL_CONFIRMATION in AuthContext.tsx and _layout.tsx
+const REQUIRE_EMAIL_CONFIRMATION = false;
+
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
 const schema = z.object({
@@ -70,7 +73,11 @@ export default function SignupScreen() {
                 setServerError(error);
             }
         } else {
-            setRegisteredEmail(email);
+            if (REQUIRE_EMAIL_CONFIRMATION) {
+                setRegisteredEmail(email);
+            } else {
+                router.replace('/(auth)/login');
+            }
         }
     };
 
