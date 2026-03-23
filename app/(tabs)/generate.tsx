@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
+import { Animated } from 'react-native';
 import {
     ActivityIndicator,
     Modal,
@@ -169,16 +170,37 @@ export default function GenerateScreen() {
     const [docTitle, setDocTitle] = useState('');
     const [templateId, setTemplateId] = useState<TemplateId>('modern');
     const [jdText, setJdText] = useState('');
+    const [jdEnabled, setJdEnabled] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState<GeneratedDocument | null>(null);
     const [genError, setGenError] = useState<string | null>(null);
     const [readinessIssue, setReadinessIssue] = useState<ReadinessIssue | null>(null);
 
+    // Toggle animation
+    const toggleAnim = useRef(new Animated.Value(1)).current;
+    const handleToggleJd = () => {
+        const next = !jdEnabled;
+        setJdEnabled(next);
+        Animated.spring(toggleAnim, {
+            toValue: next ? 1 : 0,
+            useNativeDriver: false,
+            bounciness: 4,
+        }).start();
+    };
+    const thumbLeft = toggleAnim.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
+    const trackBg = toggleAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [colors.border, colors.primary],
+    });
+
     // Only check once data has loaded — avoid false negatives during mount
     const readinessReady = !profileLoading && !expLoading;
     const profileComplete = !!(profile?.full_name?.trim() && profile?.headline?.trim());
     const hasExperiences = experiences.length > 0;
-    const canGenerate = jdText.trim().length > 30 && docTitle.trim().length > 0 && !generating;
+    const canGenerate =
+        docTitle.trim().length > 0 &&
+        !generating &&
+        (!jdEnabled || jdText.trim().length > 30);
 
     const handleGenerate = async () => {
         // Pre-generation readiness check (skip if still loading)
@@ -193,7 +215,7 @@ export default function GenerateScreen() {
             setGenerating(true);
             setGenError(null);
             setResult(null);
-            const doc = await generate(docType, jdText.trim(), docTitle.trim(), templateId);
+            const doc = await generate(docType, jdEnabled ? jdText.trim() : '', docTitle.trim(), templateId);
             setResult(doc);
         } catch (e) {
             setGenError((e as Error).message);
@@ -318,30 +340,50 @@ export default function GenerateScreen() {
                     </View>
                 )}
 
-                {/* JD input */}
+                {/* JD toggle + input */}
                 <View style={styles.jdSection}>
+                    {/* Header row: label + toggle */}
                     <View style={styles.jdLabelRow}>
-                        <Text style={styles.sectionLabel}>Job Description</Text>
-                        {jdText.length > 0 && (
-                            <Text style={styles.charCount}>{jdText.length} caratteri</Text>
-                        )}
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.sectionLabel}>Job Description</Text>
+                            <Text style={styles.jdToggleHint}>
+                                {jdEnabled ? 'Il CV verrà personalizzato per questa offerta' : 'Nessun filtro — verrà usato il tuo profilo completo'}
+                            </Text>
+                        </View>
+                        {/* Toggle switch */}
+                        <Pressable onPress={handleToggleJd} style={styles.toggleHitArea}>
+                            <Animated.View style={[styles.toggleTrack, { backgroundColor: trackBg }]}>
+                                <Animated.View style={[styles.toggleThumb, { left: thumbLeft }]} />
+                            </Animated.View>
+                        </Pressable>
                     </View>
-                    <TextInput
-                        style={[styles.jdInput, jdText.length > 0 && jdText.length < 30 && styles.jdInputWarn]}
-                        placeholder="Incolla qui la job description completa (titolo, azienda, requisiti, responsabilità…)"
-                        placeholderTextColor={colors.textPlaceholder}
-                        multiline
-                        numberOfLines={10}
-                        textAlignVertical="top"
-                        value={jdText}
-                        onChangeText={(t) => {
-                            setJdText(t);
-                            setResult(null);
-                            setGenError(null);
-                        }}
-                    />
-                    {jdText.length > 0 && jdText.length < 30 && (
-                        <Text style={styles.warnText}>Inserisci almeno 30 caratteri per procedere</Text>
+
+                    {/* JD text input — visibile solo se toggle attivo */}
+                    {jdEnabled && (
+                        <>
+                            <TextInput
+                                style={[styles.jdInput, jdText.length > 0 && jdText.length < 30 && styles.jdInputWarn]}
+                                placeholder={
+                                    `Incolla qui il testo dell'annuncio di lavoro (la "Job Description" o JD).\n\nSi tratta della descrizione che le aziende pubblicano quando cercano personale: include il titolo del ruolo, le responsabilità, i requisiti richiesti e spesso anche info sull'azienda e il team.\n\nPiù è completa, più il CV generato sarà preciso e mirato.`
+                                }
+                                placeholderTextColor={colors.textPlaceholder}
+                                multiline
+                                numberOfLines={10}
+                                textAlignVertical="top"
+                                value={jdText}
+                                onChangeText={(t) => {
+                                    setJdText(t);
+                                    setResult(null);
+                                    setGenError(null);
+                                }}
+                            />
+                            {jdEnabled && jdText.length > 0 && (
+                                <Text style={styles.charCount}>{jdText.length} caratteri</Text>
+                            )}
+                            {jdText.length > 0 && jdText.length < 30 && (
+                                <Text style={styles.warnText}>Inserisci almeno 30 caratteri per procedere</Text>
+                            )}
+                        </>
                     )}
                 </View>
 
@@ -557,9 +599,10 @@ const styles = StyleSheet.create({
     },
 
     // JD input
-    jdSection: { gap: 6 },
-    jdLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    charCount: { fontSize: 11, color: colors.textMuted },
+    jdSection: { gap: 8 },
+    jdLabelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    jdToggleHint: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+    charCount: { fontSize: 11, color: colors.textMuted, textAlign: 'right' },
     jdInput: {
         backgroundColor: colors.bgInput,
         borderWidth: 1,
@@ -583,6 +626,28 @@ const styles = StyleSheet.create({
     },
     jdInputWarn: { borderColor: colors.warning },
     warnText: { fontSize: 11, color: colors.warning },
+
+    // Toggle switch
+    toggleHitArea: { padding: 4 },
+    toggleTrack: {
+        width: 46,
+        height: 26,
+        borderRadius: 13,
+        justifyContent: 'center',
+    },
+    toggleThumb: {
+        position: 'absolute',
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.2,
+        shadowRadius: 2,
+        elevation: 2,
+        top: 2,
+    },
 
     // Generate button
     genBtn: {
