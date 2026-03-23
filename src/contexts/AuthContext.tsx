@@ -6,7 +6,11 @@ import React, {
     useState,
 } from 'react';
 import { Session, User } from '@supabase/supabase-js';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { supabase } from '../services/supabase';
+
+WebBrowser.maybeCompleteAuthSession();
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +30,7 @@ interface AuthContextValue extends AuthState {
         email: string,
         password: string
     ) => Promise<{ error: string | null }>;
+    signInWithGoogle: () => Promise<{ error: string | null }>;
     signOut: () => Promise<void>;
     deleteAccount: () => Promise<{ error: string | null }>;
     resendConfirmation: (email: string) => Promise<{ error: string | null }>;
@@ -41,7 +46,7 @@ interface AuthContextValue extends AuthState {
  * Remember to also toggle "Enable email confirmations" in:
  * Supabase Dashboard → Authentication → Email → Enable email confirmations
  */
-const REQUIRE_EMAIL_CONFIRMATION = false;
+const REQUIRE_EMAIL_CONFIRMATION = true;
 
 /**
  * Where Supabase redirects after email confirmation.
@@ -130,6 +135,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: error?.message ?? null };
     }, []);
 
+    const signInWithGoogle = useCallback(async () => {
+        const redirectUrl = Linking.createURL('/auth/callback');
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: { redirectTo: redirectUrl, skipBrowserRedirect: true },
+        });
+        if (error || !data.url) return { error: error?.message ?? 'Errore OAuth' };
+
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+        if (result.type === 'success') {
+            const parsed = Linking.parse(result.url);
+            const code = parsed.queryParams?.code as string | undefined;
+            if (code) {
+                const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                if (exchangeError) return { error: exchangeError.message };
+            }
+        }
+        return { error: null };
+    }, []);
+
     const signOut = useCallback(async () => {
         await supabase.auth.signOut();
     }, []);
@@ -152,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return (
         <AuthContext.Provider
-            value={{ session, user, loading, signUp, signIn, signOut, deleteAccount, resendConfirmation }}
+            value={{ session, user, loading, signUp, signIn, signInWithGoogle, signOut, deleteAccount, resendConfirmation }}
         >
             {children}
         </AuthContext.Provider>

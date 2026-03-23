@@ -256,16 +256,15 @@
             <div class="logo-name">Career<span>Vault</span></div>
         </div>
 
-        <div class="success-ring">✅</div>
+        <div class="success-ring">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+            </svg>
+        </div>
 
         <h1>Email confermata!</h1>
         <p>Il tuo account è attivo e pronto all'uso.<br />
             Torna sull'app per <strong>accedere al tuo CareerVault</strong> e iniziare a creare il tuo CV.</p>
-
-        <a id="open-app-btn" href="careervault://" class="btn">
-            📱 Apri CareerVault
-        </a>
-        <a class="btn-secondary" id="fallback-link" href="careervault://">Non funziona? Tocca qui</a>
 
         <div class="divider"></div>
 
@@ -287,33 +286,6 @@
         <p id="status-msg"></p>
     </div>
 
-    <script>
-        // Extract code/token from URL (Supabase PKCE sends ?code=, implicit sends #access_token=)
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
-        const searchParams = new URLSearchParams(window.location.search);
-
-        const code = searchParams.get('code') || hashParams.get('code');
-        const token = hashParams.get('access_token');
-
-        // Build the careervault:// deep link carrying the auth params
-        let deepLink = 'careervault://';
-        if (code) {
-            deepLink += `?code=${encodeURIComponent(code)}`;
-        } else if (token) {
-            deepLink += `?access_token=${encodeURIComponent(token)}&refresh_token=${encodeURIComponent(hashParams.get('refresh_token') || '')}`;
-        }
-
-        // Android Chrome requires an Intent URL to reliably open custom schemes.
-        // A plain href="careervault://..." is often silently blocked.
-        // Format: intent://HOST/PATH#Intent;scheme=SCHEME;package=PACKAGE;end
-        const intentUrl = `intent://auth/callback${code ? '?code=' + encodeURIComponent(code) : ''}#Intent;scheme=careervault;package=com.careervault.app;S.browser_fallback_url=${encodeURIComponent(window.location.href)};end`;
-
-        const isAndroid = /android/i.test(navigator.userAgent);
-        const btnLink = isAndroid ? intentUrl : deepLink;
-
-        document.getElementById('open-app-btn').href = btnLink;
-        document.getElementById('fallback-link').href = deepLink;
-    </script>
 
 </body>
 

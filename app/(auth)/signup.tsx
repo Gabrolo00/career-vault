@@ -19,7 +19,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { colors, radius, spacing } from '../../src/theme';
 
 // Keep in sync with REQUIRE_EMAIL_CONFIRMATION in AuthContext.tsx and _layout.tsx
-const REQUIRE_EMAIL_CONFIRMATION = false;
+const REQUIRE_EMAIL_CONFIRMATION = true;
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -88,7 +88,7 @@ export default function SignupScreen() {
             <View style={styles.flex}>
                 <View style={styles.successContainer}>
                     <View style={styles.successIcon}>
-                        <Ionicons name="mail" size={34} color={colors.primary} />
+                        <Ionicons name="mail-outline" size={32} color={colors.primary} />
                     </View>
                     <Text style={styles.successTitle}>Controlla la tua email</Text>
                     <Text style={styles.successBody}>
@@ -96,11 +96,11 @@ export default function SignupScreen() {
                         <Text style={styles.successEmail}>{registeredEmail}</Text>
                     </Text>
                     <Text style={styles.successHint}>
-                        Clicca il link nell'email per attivare il tuo account, poi accedi con le tue credenziali.
+                        Clicca il link nell'email per attivare il tuo account, poi accedi.
                     </Text>
-                    <Pressable style={styles.btn} onPress={() => router.replace('/(auth)/login')}>
-                        <Ionicons name="log-in-outline" size={18} color="#fff" />
-                        <Text style={styles.btnText}>Vai al login</Text>
+                    <Pressable style={styles.successBtn} onPress={() => router.replace('/(auth)/login')}>
+                        <Text style={styles.successBtnText}>Vai al login</Text>
+                        <Ionicons name="arrow-forward" size={16} color={colors.primary} />
                     </Pressable>
                 </View>
             </View>
@@ -418,5 +418,22 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 20,
         paddingHorizontal: spacing.md,
+    },
+    successBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: spacing.sm,
+        paddingVertical: 10,
+        paddingHorizontal: spacing.lg,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.bgCard,
+    },
+    successBtnText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: colors.primary,
     },
 });

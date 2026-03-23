@@ -20,7 +20,7 @@ import { colors, radius, spacing, typography, STATUS_ICONS, DOC_TYPE_ICONS, SCRE
 
 // ─── Doc type config ──────────────────────────────────────────────────────────
 
-const DOC_TYPES: { value: DocumentType; label: string; iconName: string; desc: string }[] = [
+const DOC_TYPES: { value: DocumentType; label: string; iconName: string; desc: string; comingSoon?: boolean }[] = [
     {
         value: 'cv',
         label: 'Curriculum Vitae',
@@ -32,6 +32,7 @@ const DOC_TYPES: { value: DocumentType; label: string; iconName: string; desc: s
         label: 'Cover Letter',
         iconName: 'mail',
         desc: 'Lettera di presentazione personalizzata con tono e parole chiave dal JD',
+        comingSoon: true,
     },
 ];
 
@@ -270,15 +271,21 @@ export default function GenerateScreen() {
                         return (
                             <Pressable
                                 key={dt.value}
-                                style={[styles.docTypeCard, active && styles.docTypeCardActive]}
-                                onPress={() => setDocType(dt.value)}
+                                style={[styles.docTypeCard, active && styles.docTypeCardActive, dt.comingSoon && styles.docTypeCardDisabled]}
+                                onPress={() => !dt.comingSoon && setDocType(dt.value)}
+                                disabled={dt.comingSoon}
                             >
+                                {dt.comingSoon && (
+                                    <View style={styles.comingSoonBadge}>
+                                        <Text style={styles.comingSoonText}>Coming soon</Text>
+                                    </View>
+                                )}
                                 <Ionicons
                                     name={dt.iconName as any}
                                     size={28}
-                                    color={active ? colors.primary : colors.textMuted}
+                                    color={dt.comingSoon ? colors.textPlaceholder : active ? colors.primary : colors.textMuted}
                                 />
-                                <Text style={[styles.docTypeLabel, active && { color: colors.primary }]}>
+                                <Text style={[styles.docTypeLabel, active && { color: colors.primary }, dt.comingSoon && { color: colors.textPlaceholder }]}>
                                     {dt.label}
                                 </Text>
                                 <Text style={styles.docTypeDesc}>{dt.desc}</Text>
@@ -549,6 +556,16 @@ const styles = StyleSheet.create({
         color: colors.textPrimary,
     },
     docTypeDesc: { fontSize: 11, color: colors.textMuted, lineHeight: 16 },
+    docTypeCardDisabled: { opacity: 0.5 },
+    comingSoonBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: colors.textMuted + '25',
+        borderRadius: radius.sm,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        marginBottom: 2,
+    },
+    comingSoonText: { fontSize: 10, fontWeight: '700', color: colors.textMuted },
 
     // Template selector
     templateSection: { gap: 6 },

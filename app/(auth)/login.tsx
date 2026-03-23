@@ -10,7 +10,7 @@ import {
     TextInput,
     View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AntDesign, Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -30,8 +30,9 @@ type FormValues = z.infer<typeof schema>;
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
-    const { signIn, resendConfirmation } = useAuth();
+    const { signIn, signInWithGoogle, resendConfirmation } = useAuth();
     const [serverError, setServerError] = useState<string | null>(null);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
     const [resendCooldown, setResendCooldown] = useState(0);
     const [resendLoading, setResendLoading] = useState(false);
@@ -53,6 +54,13 @@ export default function LoginScreen() {
         resolver: zodResolver(schema),
         defaultValues: { email: '', password: '' },
     });
+
+    const handleGoogleSignIn = async () => {
+        setGoogleLoading(true);
+        const { error } = await signInWithGoogle();
+        setGoogleLoading(false);
+        if (error) setServerError(error);
+    };
 
     const onSubmit = async ({ email, password }: FormValues) => {
         setServerError(null);
@@ -177,6 +185,29 @@ export default function LoginScreen() {
                             <ActivityIndicator color="#fff" />
                         ) : (
                             <Text style={styles.btnText}>Accedi</Text>
+                        )}
+                    </Pressable>
+
+                    {/* Divider */}
+                    <View style={styles.dividerRow}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>oppure</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+
+                    {/* Google Sign-In */}
+                    <Pressable
+                        style={[styles.googleBtn, googleLoading && styles.btnDisabled]}
+                        onPress={handleGoogleSignIn}
+                        disabled={googleLoading}
+                    >
+                        {googleLoading ? (
+                            <ActivityIndicator color={colors.textPrimary} size="small" />
+                        ) : (
+                            <>
+                                <AntDesign name="google" size={18} color="#EA4335" />
+                                <Text style={styles.googleBtnText}>Continua con Google</Text>
+                            </>
                         )}
                     </Pressable>
 
@@ -353,6 +384,41 @@ const styles = StyleSheet.create({
     },
     btnDisabled: { opacity: 0.6 },
     btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+    // Divider
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: colors.border,
+    },
+    dividerText: {
+        fontSize: 12,
+        color: colors.textMuted,
+        fontWeight: '500',
+    },
+
+    // Google button
+    googleBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 10,
+        backgroundColor: colors.bgCardAlt,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        paddingVertical: 14,
+    },
+    googleBtnText: {
+        color: colors.textPrimary,
+        fontSize: 15,
+        fontWeight: '600',
+    },
 
     // Footer
     footer: { flexDirection: 'row', justifyContent: 'center' },

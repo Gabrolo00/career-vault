@@ -68,18 +68,19 @@ const LAST_INDEX = SLIDES.length - 1;
 
 // ─── Dot indicators ───────────────────────────────────────────────────────────
 
-function Dots({ current, total }: { current: number; total: number }) {
+function Dots({ current, total, onPress }: { current: number; total: number; onPress: (i: number) => void }) {
     return (
         <View style={styles.dotsRow}>
             {Array.from({ length: total }).map((_, i) => (
-                <View
-                    key={i}
-                    style={[
-                        styles.dot,
-                        i === current && styles.dotActive,
-                        i < current && styles.dotPast,
-                    ]}
-                />
+                <Pressable key={i} onPress={() => onPress(i)} hitSlop={10}>
+                    <View
+                        style={[
+                            styles.dot,
+                            i === current && styles.dotActive,
+                            i < current && styles.dotPast,
+                        ]}
+                    />
+                </Pressable>
             ))}
         </View>
     );
@@ -118,11 +119,12 @@ export default function OnboardingScreen() {
 
     const isLast = currentIndex === LAST_INDEX;
 
-    const goNext = () => {
-        const next = currentIndex + 1;
-        flatListRef.current?.scrollToIndex({ index: next, animated: true });
-        setCurrentIndex(next);
+    const goToIndex = (index: number) => {
+        flatListRef.current?.scrollToIndex({ index, animated: true });
+        setCurrentIndex(index);
     };
+
+    const goNext = () => goToIndex(currentIndex + 1);
 
     const handleStart = async () => {
         try {
@@ -163,15 +165,19 @@ export default function OnboardingScreen() {
                 keyExtractor={(s) => s.key}
                 horizontal
                 pagingEnabled
-                scrollEnabled={false}
+                scrollEnabled
                 showsHorizontalScrollIndicator={false}
                 renderItem={({ item }) => <SlideView slide={item} />}
                 style={styles.flatList}
+                onMomentumScrollEnd={(e) => {
+                    const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+                    setCurrentIndex(index);
+                }}
             />
 
             {/* Bottom controls */}
             <View style={styles.bottomControls}>
-                <Dots current={currentIndex} total={SLIDES.length} />
+                <Dots current={currentIndex} total={SLIDES.length} onPress={goToIndex} />
 
                 {isLast ? (
                     <Pressable

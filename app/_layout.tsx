@@ -3,9 +3,10 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Linking from 'expo-linking';
 import { AuthProvider, useAuth } from '../src/contexts/AuthContext';
 import { supabase } from '../src/services/supabase';
+import { getProfile } from '../src/services/profileService';
 
 // Keep in sync with REQUIRE_EMAIL_CONFIRMATION in AuthContext.tsx
-const REQUIRE_EMAIL_CONFIRMATION = false;
+const REQUIRE_EMAIL_CONFIRMATION = true;
 
 // ─── Auth Guard ───────────────────────────────────────────────────────────────
 
@@ -25,7 +26,9 @@ function AuthGuard() {
         if (!url) return;
         const parsed = Linking.parse(url);
         const code = parsed.queryParams?.code as string | undefined;
-        if (!code) return;
+        const type = parsed.queryParams?.type as string | undefined;
+        // Only handle email confirmation deep links, not Google OAuth callbacks
+        if (!code || type !== 'signup') return;
 
         handlingDeepLink.current = true;
         supabase.auth.exchangeCodeForSession(code).finally(() => {
@@ -49,7 +52,15 @@ function AuthGuard() {
         }
 
         if (session && inAuthGroup) {
-            router.replace('/(tabs)');
+            getProfile().then(profile => {
+                if (!profile?.onboarding_completed) {
+                    router.replace('/onboarding');
+                } else {
+                    router.replace('/(tabs)');
+                }
+            }).catch(() => {
+                router.replace('/(tabs)');
+            });
         }
     }, [session, loading, segments]);
 
