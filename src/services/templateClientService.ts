@@ -34,7 +34,6 @@ const MODERN_HTML = `<!DOCTYPE html>
   /* ── SHELL ── */
   .cv {
     width: 794px;
-    min-height: 1123px;
     display: flex;
     background: #ffffff;
   }
@@ -465,7 +464,6 @@ const MINIMAL_HTML = `<!DOCTYPE html>
         /* ── SHELL ── */
         .cv {
             width: 794px;
-            min-height: 1123px;
             padding: 56px 60px 56px 60px;
             display: flex;
             flex-direction: column;
@@ -817,7 +815,6 @@ const CREATIVE_HTML = `<!DOCTYPE html>
         /* ── SHELL ── */
         .cv {
             width: 794px;
-            min-height: 1123px;
             display: flex;
             background: #ffffff;
         }
