@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import { supabase } from './supabase';
 import { Profile, ProfileUpdate } from '../types/database';
 
@@ -52,18 +53,20 @@ export async function uploadAvatar(localUri: string, mimeType = 'image/jpeg'): P
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Utente non autenticato');
 
-    // Fetch del file locale → blob
-    const response = await fetch(localUri);
-    const blob = await response.blob();
-
     const ext = mimeType.split('/')[1] ?? 'jpg';
     const filePath = `${user.id}/avatar.${ext}`;
 
+    // Legge il file come base64 (funziona con content:// URI su Android)
+    const base64 = await FileSystem.readAsStringAsync(localUri, {
+        encoding: FileSystem.EncodingType.Base64,
+    });
+    const buffer = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
     const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, blob, {
+        .upload(filePath, buffer, {
             contentType: mimeType,
-            upsert: true,       // sovrascrive se esiste già
+            upsert: true,
         });
 
     if (uploadError) throw new Error(uploadError.message);
