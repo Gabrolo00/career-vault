@@ -45,8 +45,9 @@ function AuthGuard() {
 
         const inAuthGroup = segments[0] === '(auth)';
         const inOnboarding = segments[0] === 'onboarding';
+        const inResetPassword = segments[0] === 'reset-password';
 
-        if (!session && !inAuthGroup && !inOnboarding) {
+        if (!session && !inAuthGroup && !inOnboarding && !inResetPassword) {
             router.replace('/(auth)/login');
             return;
         }
@@ -69,6 +70,7 @@ function AuthGuard() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+            <Stack.Screen name="reset-password" />
             <Stack.Screen name="experience" />
             <Stack.Screen name="document" />
         </Stack>

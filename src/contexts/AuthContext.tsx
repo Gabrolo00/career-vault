@@ -34,6 +34,7 @@ interface AuthContextValue extends AuthState {
     signOut: () => Promise<void>;
     deleteAccount: () => Promise<{ error: string | null }>;
     resendConfirmation: (email: string) => Promise<{ error: string | null }>;
+    resetPassword: (email: string) => Promise<{ error: string | null }>;
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -175,9 +176,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: error?.message ?? null };
     }, []);
 
+    const resetPassword = useCallback(async (email: string) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: 'careervault://reset-password',
+        });
+        return { error: error?.message ?? null };
+    }, []);
+
     return (
         <AuthContext.Provider
-            value={{ session, user, loading, signUp, signIn, signInWithGoogle, signOut, deleteAccount, resendConfirmation }}
+            value={{ session, user, loading, signUp, signIn, signInWithGoogle, signOut, deleteAccount, resendConfirmation, resetPassword }}
         >
             {children}
         </AuthContext.Provider>

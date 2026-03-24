@@ -211,6 +211,12 @@ export default function LoginScreen() {
                         )}
                     </Pressable>
 
+                    <Link href="/(auth)/forgot-password" asChild>
+                        <Pressable style={styles.forgotBtn}>
+                            <Text style={styles.forgotText}>Hai dimenticato la password?</Text>
+                        </Pressable>
+                    </Link>
+
                     <View style={styles.footer}>
                         <Text style={styles.footerText}>Non hai un account? </Text>
                         <Link href="/(auth)/signup" asChild>
@@ -419,6 +425,10 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '600',
     },
+
+    // Forgot password
+    forgotBtn: { alignItems: 'center' },
+    forgotText: { color: colors.textMuted, fontSize: 13 },
 
     // Footer
     footer: { flexDirection: 'row', justifyContent: 'center' },
